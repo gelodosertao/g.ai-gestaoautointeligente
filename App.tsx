@@ -421,7 +421,7 @@ const App: React.FC = () => {
   const renderContent = () => {
     // Special case for Online Menu (Public)
     if (currentView === 'ONLINE_MENU') {
-      return <OnlineMenu onBack={() => setCurrentView('DASHBOARD')} />;
+      return <OnlineMenu />;
     }
 
     if (isLoading) {
@@ -530,7 +530,7 @@ const App: React.FC = () => {
   if (currentView === 'ONLINE_MENU') {
     return (
       <Suspense fallback={<div className="h-screen w-screen flex items-center justify-center bg-slate-50"><Loader2 size={48} className="animate-spin text-orange-500" /></div>}>
-        <OnlineMenu onBack={() => setCurrentView('DASHBOARD')} />
+        <OnlineMenu />
       </Suspense>
     );
   }
