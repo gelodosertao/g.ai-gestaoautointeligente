@@ -909,7 +909,9 @@ const OnlineMenu: React.FC<OnlineMenuProps> = ({ onBack }) => {
                                     <div className="flex-1 flex flex-col py-1 pr-1">
                                         <div className="mb-auto">
                                             <h3 className="font-extrabold text-slate-800 text-base leading-tight group-hover:text-blue-600 transition-colors">{product.name}</h3>
-                                            <p className="text-xs text-slate-500 mt-1.5 leading-relaxed line-clamp-2">{product.description || product.category}</p>
+                                            <p className="text-xs text-slate-500 mt-1.5 leading-relaxed line-clamp-2">
+                                                {product.description || (product.category === 'Batidas' ? 'Feito com a fruta, leite condensado, destilado e gelo' : product.category === 'Caipirinha' ? 'Feito com a fruta, cachaça, açucar e gelo' : product.category === 'Caipirinhas Premium' ? 'Feito com a fruta, Absolut e Licor 43, açucar e gelo' : product.category)}
+                                            </p>
                                         </div>
 
                                         <div className="flex justify-between items-center mt-3 pt-2 border-t border-slate-50">
