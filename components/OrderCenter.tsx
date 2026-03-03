@@ -316,9 +316,26 @@ const OrderCenter: React.FC<OrderCenterProps> = ({ onBack, tenantId }) => {
                                                     <div className="bg-slate-50 rounded-lg p-2.5 mb-3 border border-slate-100">
                                                         <ul className="space-y-1.5">
                                                             {order.items.map((item, idx) => (
-                                                                <li key={idx} className="text-sm text-slate-700 flex justify-between items-start border-b border-dashed border-slate-200 last:border-0 pb-1 last:pb-0">
-                                                                    <span className="font-medium mr-2">{item.quantity}x</span>
-                                                                    <span className="flex-1 leading-snug">{item.productName}</span>
+                                                                <li key={idx} className="text-sm text-slate-700 flex flex-col items-start border-b border-dashed border-slate-200 last:border-0 pb-2 mb-1 last:mb-0 last:pb-0">
+                                                                    <div className="flex justify-between w-full">
+                                                                        <span className="font-medium mr-2">{item.quantity}x</span>
+                                                                        <span className="flex-1 leading-snug font-semibold">{item.productName}</span>
+                                                                    </div>
+                                                                    {item.selectedOptions && item.selectedOptions.length > 0 && (
+                                                                        <div className="ml-6 mt-1 flex flex-col gap-0.5 w-full">
+                                                                            {item.selectedOptions.map((opt, oIdx) => (
+                                                                                <span key={oIdx} className="text-xs text-slate-500 flex items-center gap-1">
+                                                                                    <span className="w-1 h-1 rounded-full bg-slate-400 inline-block shrink-0"></span>
+                                                                                    {opt.choiceName} {opt.priceChange > 0 ? `(+R$ ${opt.priceChange.toFixed(2)})` : ''}
+                                                                                </span>
+                                                                            ))}
+                                                                        </div>
+                                                                    )}
+                                                                    {item.notes && (
+                                                                        <div className="ml-6 mt-1 text-xs text-orange-600 bg-orange-50 px-2 py-1 rounded w-[calc(100%-1.5rem)] italic">
+                                                                            Obs: {item.notes}
+                                                                        </div>
+                                                                    )}
                                                                 </li>
                                                             ))}
                                                         </ul>

@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Product, Order, Branch, StoreSettings } from '../types';
 import { ShoppingBag, Minus, Plus, X, Search, MapPin, CreditCard, Send, CheckCircle, ChevronLeft, Store } from 'lucide-react';
-import { dbProducts, dbSettings, dbOrders } from '../services/db';
+import { dbProducts, dbSettings, dbOrders, dbCustomers } from '../services/db';
 import { getTodayDate } from '../services/utils';
 
 interface CartItem {
@@ -47,125 +47,56 @@ const OnlineMenu: React.FC<OnlineMenuProps> = ({ onBack }) => {
     const [deliveryFee, setDeliveryFee] = useState(0);
     const [isCalculatingFee, setIsCalculatingFee] = useState(false);
 
-    // Map State
-    const [showMap, setShowMap] = useState(false);
-    const mapRef = useRef<any>(null);
-    const markerRef = useRef<any>(null);
+    // Address State
+    const [cep, setCep] = useState('');
+    const [isSearchingCep, setIsSearchingCep] = useState(false);
     const [houseNumber, setHouseNumber] = useState('');
 
     // Refs for scrolling
     const categoryScrollRef = useRef<HTMLDivElement>(null);
     const addressTypingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
-    // --- EFFECT: MAP INITIALIZATION ---
-    useEffect(() => {
-        if (!showMap) return;
+    // --- SEARCH CEP ---
+    const handleCepSearch = async (currentCep: string) => {
+        const cleanCep = currentCep.replace(/\D/g, '');
+        setCep(cleanCep);
+        if (cleanCep.length !== 8) return;
 
-        // Cleanup previous map instance if exists (safety)
-        if (mapRef.current) {
-            mapRef.current.remove();
-            mapRef.current = null;
-        }
-
-        const timeout = setTimeout(() => {
-            const L = (window as any).L;
-            if (!L) {
-                console.error("Leaflet not loaded");
-                return;
+        setIsSearchingCep(true);
+        try {
+            const resp = await fetch(`https://viacep.com.br/ws/${cleanCep}/json/`);
+            const data = await resp.json();
+            if (!data.erro) {
+                const newAddress = `${data.logradouro}, ${data.bairro}, ${data.localidade} - ${data.uf}`;
+                setAddress(newAddress);
+            } else {
+                alert("CEP não encontrado.");
             }
-
-            // Default Store Location (Barreiras - BA - Av. São Desidério, 701A)
-            const storeLat = settings?.storeLat || -12.156282;
-            const storeLon = settings?.storeLng || -45.005835;
-
-            // Create Map
-            mapRef.current = L.map('map-container').setView([storeLat, storeLon], 16);
-
-            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-                attribution: '&copy; OpenStreetMap contributors'
-            }).addTo(mapRef.current);
-
-            // Add Store Marker
-            const storeIcon = L.divIcon({
-                className: 'custom-div-icon',
-                html: `<div style="background-color: blue; width: 15px; height: 15px; border-radius: 50%; border: 2px solid white; box-shadow: 0 0 5px rgba(0,0,0,0.5);"></div>`,
-                iconSize: [20, 20],
-                iconAnchor: [10, 10]
-            });
-
-            L.marker([storeLat, storeLon], { icon: storeIcon }).addTo(mapRef.current)
-                .bindPopup(`<b>${settings?.storeName || 'Loja'}</b><br>Nós estamos aqui!`).openPopup();
-
-            // Click Handler for Customer Pin
-            mapRef.current.on('click', async (e: any) => {
-                const { lat, lng } = e.latlng;
-
-                // Remove old marker
-                if (markerRef.current) {
-                    mapRef.current.removeLayer(markerRef.current);
-                }
-
-                // Add new marker
-                // Using a simple red icon
-                const redIcon = L.divIcon({
-                    className: 'custom-div-icon',
-                    html: `<div style="background-color: red; width: 20px; height: 20px; border-radius: 50%; border: 3px solid white; box-shadow: 0 0 10px rgba(0,0,0,0.5); animation: bounce 0.5s;"></div>`,
-                    iconSize: [24, 24],
-                    iconAnchor: [12, 12]
-                });
-
-                markerRef.current = L.marker([lat, lng], { icon: redIcon }).addTo(mapRef.current)
-                    .bindPopup("Sua Entrega").openPopup();
-
-                // 1. Calculate Distance & Fee
-                const R = 6371; // Earth radius in km
-                const dLat = (lat - storeLat) * Math.PI / 180;
-                const dLon = (lng - storeLon) * Math.PI / 180;
-                const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-                    Math.cos(storeLat * Math.PI / 180) * Math.cos(lat * Math.PI / 180) *
-                    Math.sin(dLon / 2) * Math.sin(dLon / 2);
-                const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-                const d = R * c; // Distance in km
-                const distKm = Math.max(0.1, d); // Min distance
-
-                const fee = (settings?.deliveryBaseFee || 0) + (distKm * (settings?.deliveryPerKm || 0));
-                const roundedFee = Math.ceil(fee * 2) / 2;
-
-                setDeliveryFee(roundedFee);
-                setIsCalculatingFee(false);
-
-                // 2. Reverse Geocode (Get Address Text)
-                setAddress("Buscando endereço...");
-                setHouseNumber(''); // Reset house number on new pin
-                try {
-                    const resp = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}`);
-                    const data = await resp.json();
-                    if (data && data.display_name) {
-                        // Cleanup address string a bit
-                        const cleanAddr = data.display_name.split(',').slice(0, 4).join(',');
-                        setAddress(cleanAddr);
-                    } else {
-                        setAddress(`Localização selecionada no mapa (${lat.toFixed(5)}, ${lng.toFixed(5)})`);
-                    }
-                } catch (err) {
-                    console.error("Geocoding error", err);
-                    setAddress(`Localização Latitude: ${lat.toFixed(5)}, Longitude: ${lng.toFixed(5)}`);
-                }
-            });
-
-            // Invalidate size to ensure it renders correctly
-            setTimeout(() => {
-                mapRef.current.invalidateSize();
-            }, 200);
-
-        }, 100);
-
-        return () => clearTimeout(timeout);
-    }, [showMap]);
+        } catch (error) {
+            console.error("Erro ao buscar CEP", error);
+            alert("Erro ao buscar CEP.");
+        } finally {
+            setIsSearchingCep(false);
+        }
+    };
 
     // --- EFFECT: LOAD DATA ---
     useEffect(() => {
         loadData();
+
+        const savedName = localStorage.getItem('om_customerName');
+        const savedPhone = localStorage.getItem('om_customerPhone');
+        const savedCep = localStorage.getItem('om_cep');
+        const savedAddress = localStorage.getItem('om_address');
+        const savedHouseNumber = localStorage.getItem('om_houseNumber');
+        const savedRef = localStorage.getItem('om_referencePoint');
+
+        if (savedName) setCustomerName(savedName);
+        if (savedPhone) setCustomerPhone(savedPhone);
+        if (savedCep) setCep(savedCep);
+        if (savedAddress) setAddress(savedAddress);
+        if (savedHouseNumber) setHouseNumber(savedHouseNumber);
+        if (savedRef) setReferencePoint(savedRef);
     }, []);
 
     // --- EFFECT: Debounce Address Calculation ---
@@ -304,7 +235,7 @@ const OnlineMenu: React.FC<OnlineMenuProps> = ({ onBack }) => {
     // --- HELPERS ---
     const formatCurrency = (val: number) => val.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
 
-    const categories = ['Todos', ...Array.from(new Set(products.map(p => p.category)))];
+    const categories = ['Todos', ...Array.from(new Set(products.map(p => p.category))).sort((a, b) => a.localeCompare(b))];
 
     const filteredProducts = products.filter(p => {
         const matchesSearch = p.name.toLowerCase().includes(searchTerm.toLowerCase());
@@ -495,13 +426,16 @@ const OnlineMenu: React.FC<OnlineMenuProps> = ({ onBack }) => {
     const handleFinishOrder = async () => {
         if (!customerName.trim()) return alert("Por favor, digite seu nome.");
         if (!customerPhone.trim()) return alert("Por favor, digite seu WhatsApp.");
-        if (deliveryMethod === 'DELIVERY' && !address.trim()) return alert("Por favor, digite o endereço de entrega.");
+        if (deliveryMethod === 'DELIVERY') {
+            if (!address.trim()) return alert("Por favor, digite o endereço de entrega.");
+            if (!houseNumber.trim()) return alert("Por favor, digite o número do endereço.");
+        }
 
         setIsProcessing(true);
 
         try {
             const fullAddress = deliveryMethod === 'DELIVERY'
-                ? `${address}${referencePoint ? ` (Ref: ${referencePoint})` : ''}`
+                ? `${address}, Nº ${houseNumber}${referencePoint ? ` (Ref: ${referencePoint})` : ''}`
                 : undefined;
 
             const newOrder: Order = {
@@ -529,6 +463,34 @@ const OnlineMenu: React.FC<OnlineMenuProps> = ({ onBack }) => {
             const params = new URLSearchParams(window.location.search);
             const tenantId = params.get('tenantId') || '00000000-0000-0000-0000-000000000000';
             await dbOrders.add(newOrder, tenantId);
+
+            localStorage.setItem('om_customerName', customerName);
+            localStorage.setItem('om_customerPhone', customerPhone);
+            if (deliveryMethod === 'DELIVERY') {
+                localStorage.setItem('om_cep', cep);
+                localStorage.setItem('om_address', address);
+                localStorage.setItem('om_houseNumber', houseNumber);
+                localStorage.setItem('om_referencePoint', referencePoint);
+            }
+
+            try {
+                const allCustomers = await dbCustomers.getAll(tenantId);
+                const exists = allCustomers.find(c => c.phone === customerPhone);
+                if (!exists) {
+                    await dbCustomers.add({
+                        id: crypto.randomUUID(),
+                        name: customerName,
+                        phone: customerPhone,
+                        address: fullAddress || '',
+                    }, tenantId);
+                } else if (deliveryMethod === 'DELIVERY' && fullAddress && exists.address !== fullAddress) {
+                    await dbCustomers.update({
+                        ...exists,
+                        name: customerName,
+                        address: fullAddress
+                    });
+                }
+            } catch (e) { console.error("Could not save customer", e); }
 
             setStep('SUCCESS');
             setCart([]);
@@ -585,8 +547,6 @@ const OnlineMenu: React.FC<OnlineMenuProps> = ({ onBack }) => {
             setIsProcessing(false);
         }
     };
-
-    // --- RENDER COMPONENT ---
 
     // --- RENDER COMPONENT ---
 
@@ -693,17 +653,24 @@ const OnlineMenu: React.FC<OnlineMenuProps> = ({ onBack }) => {
                         </div>
                         {deliveryMethod === 'DELIVERY' && (
                             <div className="space-y-3">
-                                <div className="space-y-3">
-                                    <button
-                                        onClick={() => setShowMap(true)}
-                                        className="w-full py-4 bg-orange-50 border border-orange-200 text-orange-700 font-bold rounded-xl flex items-center justify-center gap-2 hover:bg-orange-100 transition-colors shadow-sm"
-                                    >
-                                        <MapPin size={22} className="fill-orange-500 text-white" />
-                                        {address ? 'Alterar Localização no Mapa' : 'Selecionar Local de Entrega no Mapa'}
-                                    </button>
+                                <div className="flex gap-2 relative">
+                                    <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
+                                    <input
+                                        type="text"
+                                        className="w-full bg-slate-50 border-0 rounded-xl pl-10 pr-4 py-3 text-slate-800 font-medium focus:ring-2 focus:ring-blue-500 outline-none"
+                                        placeholder="Digite seu CEP"
+                                        value={cep}
+                                        onChange={e => handleCepSearch(e.target.value)}
+                                        maxLength={9}
+                                    />
+                                    {isSearchingCep && <div className="absolute right-3 top-1/2 -translate-y-1/2"><div className="w-4 h-4 border-2 border-blue-600 border-t-transparent rounded-full animate-spin"></div></div>}
+                                </div>
 
-                                    <textarea className="w-full bg-slate-50 border-0 rounded-xl px-4 py-3 text-slate-800 font-medium focus:ring-2 focus:ring-blue-500 outline-none resize-none h-20 text-sm" placeholder="Endereço completo (Confirmar detalhes)" value={address} onChange={e => setAddress(e.target.value)} />
-                                    <input type="text" className="w-full bg-slate-50 border-0 rounded-xl px-4 py-3 text-slate-800 font-medium focus:ring-2 focus:ring-blue-500 outline-none" placeholder="Ponto de Referência" value={referencePoint} onChange={e => setReferencePoint(e.target.value)} />
+                                <textarea className="w-full bg-slate-50 border-0 rounded-xl px-4 py-3 text-slate-800 font-medium focus:ring-2 focus:ring-blue-500 outline-none resize-none h-20 text-sm" placeholder="Endereço completo (Rua, Bairro, Cidade)" value={address} onChange={e => setAddress(e.target.value)} />
+
+                                <div className="flex gap-2">
+                                    <input type="text" className="w-[100px] shrink-0 bg-slate-50 border-0 rounded-xl px-4 py-3 text-slate-800 font-medium focus:ring-2 focus:ring-blue-500 outline-none" placeholder="Número" value={houseNumber} onChange={e => setHouseNumber(e.target.value)} />
+                                    <input type="text" className="flex-1 bg-slate-50 border-0 rounded-xl px-4 py-3 text-slate-800 font-medium focus:ring-2 focus:ring-blue-500 outline-none" placeholder="Ponto de Referência" value={referencePoint} onChange={e => setReferencePoint(e.target.value)} />
                                 </div>
                             </div>
                         )}
@@ -723,77 +690,6 @@ const OnlineMenu: React.FC<OnlineMenuProps> = ({ onBack }) => {
                         )}
                     </div>
                 </div>
-
-                {/* Map Modal */}
-                {showMap && (
-                    <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in">
-                        <div className="bg-white w-full max-w-lg h-[80vh] rounded-2xl overflow-hidden flex flex-col shadow-2xl animate-in zoom-in-95">
-                            <div className="p-4 bg-slate-900 text-white flex justify-between items-center shrink-0">
-                                <div>
-                                    <h3 className="font-bold flex items-center gap-2 text-lg"><MapPin className="text-orange-500" /> Onde você está?</h3>
-                                    <p className="text-xs text-slate-400">Toque no mapa para marcar sua entrega</p>
-                                </div>
-                                <button onClick={() => setShowMap(false)} className="p-2 bg-slate-800 rounded-full hover:bg-slate-700 transition-colors"><X size={20} /></button>
-                            </div>
-
-                            <div className="flex-1 relative bg-slate-100">
-                                <div id="map-container" className="absolute inset-0 z-10" />
-                                {!mapRef.current && (
-                                    <div className="absolute inset-0 flex items-center justify-center text-slate-400">
-                                        <p>Carregando mapa...</p>
-                                    </div>
-                                )}
-                            </div>
-
-                            <div className="p-4 bg-white border-t border-slate-200 shrink-0">
-                                <div className="mb-3">
-                                    <p className="text-xs font-bold text-slate-500 uppercase">Endereço Selecionado</p>
-                                    <p className="text-sm text-slate-800 font-medium truncate mb-2">{address || 'Toque no mapa para selecionar'}</p>
-
-                                    {address && (
-                                        <div className="flex gap-2 mb-2 animate-in slide-in-from-bottom-2">
-                                            <div className="flex-1">
-                                                <label className="text-[10px] font-bold text-slate-500 uppercase">Número</label>
-                                                <input
-                                                    type="number"
-                                                    placeholder="Nº"
-                                                    className="w-full px-3 py-2 bg-slate-100 border border-slate-300 rounded-lg text-slate-900 font-bold outline-none focus:ring-2 focus:ring-blue-500"
-                                                    value={houseNumber}
-                                                    onChange={(e) => setHouseNumber(e.target.value)}
-                                                    autoFocus
-                                                />
-                                            </div>
-                                            <div className="flex-[2]">
-                                                <label className="text-[10px] font-bold text-slate-500 uppercase">Complemento (opc)</label>
-                                                <input
-                                                    type="text"
-                                                    placeholder="Apto, Bloco..."
-                                                    className="w-full px-3 py-2 bg-slate-100 border border-slate-300 rounded-lg text-slate-900 outline-none focus:ring-2 focus:ring-blue-500"
-                                                    value={referencePoint}
-                                                    onChange={(e) => setReferencePoint(e.target.value)}
-                                                />
-                                            </div>
-                                        </div>
-                                    )}
-
-                                    {deliveryFee > 0 && <p className="text-xs text-green-600 font-bold">Taxa de Entrega: {formatCurrency(deliveryFee)}</p>}
-                                </div>
-                                <button
-                                    onClick={() => {
-                                        if (houseNumber) {
-                                            setAddress(`${address}, Nº ${houseNumber}`);
-                                        }
-                                        setShowMap(false);
-                                    }}
-                                    disabled={!address || !houseNumber}
-                                    className="w-full bg-blue-600 hover:bg-blue-700 text-white py-3 rounded-xl font-bold shadow-lg disabled:opacity-50 disabled:cursor-not-allowed transition-all"
-                                >
-                                    Confirmar Localização
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                )}
 
                 {/* Footer Action */}
                 <div className="fixed bottom-0 left-0 right-0 p-4 bg-white border-t border-slate-100 shadow-[0_-5px_20px_rgba(0,0,0,0.05)]">
@@ -913,57 +809,57 @@ const OnlineMenu: React.FC<OnlineMenuProps> = ({ onBack }) => {
                 </div>
             )}
 
-            {/* Header / Hero */}
-            <div className={`bg-white shadow-sm border-b border-slate-200 sticky top-0 z-20 transition-all duration-300`}>
-                <div className="px-4 py-3 flex items-center gap-3">
-                    {onBack && (
-                        <button onClick={onBack} className="p-2 -ml-2 hover:bg-slate-100 rounded-full text-slate-500">
-                            <ChevronLeft size={24} />
-                        </button>
-                    )}
-                    <h1 className="font-bold text-lg text-slate-800 truncate flex-1">
-                        {settings?.storeName || 'Gelo do Sertão'}
-                    </h1>
-                    {settings?.openingHours && (
-                        <div className="flex items-center gap-1.5 text-xs font-medium text-green-600 bg-green-50 px-2.5 py-1 rounded-full border border-green-100 whitespace-nowrap">
-                            <span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse"></span>
-                            Aberto
-                        </div>
-                    )}
-                </div>
+            {/* Premium Header / Hero */}
+            <div className="relative z-20">
+                {/* Optional Cover Background */}
+                {settings?.coverImage && (
+                    <div className="absolute inset-0 h-[220px] w-full overflow-hidden z-0">
+                        <img src={settings.coverImage} className="w-full h-full object-cover" alt="Cover" />
+                        <div className="absolute inset-0 bg-gradient-to-b from-black/70 via-black/40 to-slate-50"></div>
+                    </div>
+                )}
 
-                {/* Categories Scroll */}
-                <div className="px-4 pb-0 overflow-x-auto scrollbar-hide flex gap-2" ref={categoryScrollRef}>
-                    {categories.map(cat => (
-                        <button
-                            key={cat}
-                            onClick={() => {
-                                setSelectedCategory(cat);
-                                window.scrollTo({ top: 0, behavior: 'smooth' });
-                            }}
-                            className={`pb-3 px-2 text-sm font-bold whitespace-nowrap border-b-2 transition-colors ${selectedCategory === cat
-                                ? 'border-slate-900 text-slate-900'
-                                : 'border-transparent text-slate-400 hover:text-slate-600'
-                                }`}
-                        >
-                            {cat}
-                        </button>
-                    ))}
-                </div>
-            </div>
+                <div className={`relative z-10 ${settings?.coverImage ? 'pt-10' : 'bg-white shadow-sm border-b border-slate-100'}`}>
+                    <div className="px-5 py-4 flex flex-col items-center gap-2 text-center">
+                        <h1 className={`font-black text-2xl tracking-tight ${settings?.coverImage ? 'text-white' : 'text-slate-800'}`}>
+                            {settings?.storeName || 'Gelo do Sertão'}
+                        </h1>
+                        <p className={`text-sm font-medium flex items-center gap-1.5 ${settings?.coverImage ? 'text-white/80' : 'text-slate-500'}`}>
+                            <MapPin size={14} /> {settings?.address || 'Cardápio Online'}
+                        </p>
+                        {settings?.openingHours && (
+                            <div className="mt-1 flex items-center gap-1.5 text-xs font-bold text-green-700 bg-green-400/20 backdrop-blur-md px-3 py-1 rounded-full shadow-sm">
+                                <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></span>
+                                Aberto Agora
+                            </div>
+                        )}
+                    </div>
 
-            {/* Hero Banner (Optional) */}
-            {settings?.coverImage && (
-                <div className="relative h-48 md:h-64 w-full overflow-hidden">
-                    <img src={settings.coverImage} className="w-full h-full object-cover" alt="Cover" />
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent flex items-end p-4">
-                        <div className="text-white">
-                            <h2 className="text-2xl font-bold">{settings.storeName}</h2>
-                            <p className="text-sm opacity-90 flex items-center gap-1"><MapPin size={14} /> {settings.address || 'Entrega Rápida'}</p>
+                    {/* Glassmorphism Categories Scroll */}
+                    <div className="sticky top-0 z-30 bg-white/70 backdrop-blur-xl border-b border-white/50 shadow-[0_4px_20px_-10px_rgba(0,0,0,0.05)]">
+                        <div className="px-5 py-3 overflow-x-auto scrollbar-hide flex gap-2 items-center" ref={categoryScrollRef}>
+                            {categories.map(cat => {
+                                const isActive = selectedCategory === cat;
+                                return (
+                                    <button
+                                        key={cat}
+                                        onClick={() => {
+                                            setSelectedCategory(cat);
+                                            window.scrollTo({ top: 0, behavior: 'smooth' });
+                                        }}
+                                        className={`px-4 py-2 text-sm font-bold whitespace-nowrap rounded-full transition-all duration-300 ease-out ${isActive
+                                            ? 'bg-blue-600 text-white shadow-md shadow-blue-500/30 scale-105'
+                                            : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-50 hover:border-slate-300'
+                                            }`}
+                                    >
+                                        {cat}
+                                    </button>
+                                );
+                            })}
                         </div>
                     </div>
                 </div>
-            )}
+            </div>
 
             {/* Content */}
             <main className="max-w-3xl mx-auto p-4 space-y-6">
@@ -983,42 +879,48 @@ const OnlineMenu: React.FC<OnlineMenuProps> = ({ onBack }) => {
                 {isLoading ? (
                     <div className="py-20 text-center text-slate-400 animate-pulse">Carregando cardápio...</div>
                 ) : (
-                    <div className="grid grid-cols-1 gap-4">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         {filteredProducts.map(product => {
                             const qty = getCartQuantity(product.id);
 
                             return (
-                                <div key={product.id} className="bg-white p-4 rounded-2xl shadow-sm border border-slate-100 flex gap-4 animate-in slide-in-from-bottom-4 duration-500" onClick={() => handleProductClick(product)}>
-                                    {/* Product Image */}
-                                    <div className="w-24 h-24 bg-slate-100 rounded-xl shrink-0 overflow-hidden relative">
+                                <div
+                                    key={product.id}
+                                    className="bg-white p-3 rounded-2xl shadow-sm border border-slate-100 hover:shadow-md hover:border-blue-100 transition-all flex gap-4 animate-in slide-in-from-bottom-4 duration-500 group cursor-pointer"
+                                    onClick={() => handleProductClick(product)}
+                                >
+                                    {/* Premium Product Image */}
+                                    <div className="w-28 h-28 bg-slate-50 rounded-xl shrink-0 overflow-hidden relative shadow-inner">
                                         {product.image ? (
-                                            <img src={product.image} className="w-full h-full object-cover" alt={product.name} />
+                                            <img src={product.image} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" alt={product.name} />
                                         ) : (
-                                            <div className="w-full h-full flex items-center justify-center text-slate-300">
+                                            <div className="w-full h-full flex items-center justify-center text-slate-300 bg-gradient-to-br from-slate-50 to-slate-100">
                                                 <Store size={32} />
                                             </div>
                                         )}
                                         {qty > 0 && (
-                                            <div className="absolute top-1 right-1 bg-blue-600 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full shadow-sm border-2 border-white">
+                                            <div className="absolute -top-1 -right-1 bg-gradient-to-r from-blue-600 to-indigo-600 text-white text-[10px] font-black px-2 py-0.5 rounded-full shadow-md border-[3px] border-white">
                                                 {qty}
                                             </div>
                                         )}
                                     </div>
 
                                     {/* Info & Controls */}
-                                    <div className="flex-1 flex flex-col justify-between">
-                                        <div>
-                                            <h3 className="font-bold text-slate-800 text-base leading-tight">{product.name}</h3>
-                                            <p className="text-xs text-slate-500 mt-1 line-clamp-2">{product.description || product.category}</p>
+                                    <div className="flex-1 flex flex-col py-1 pr-1">
+                                        <div className="mb-auto">
+                                            <h3 className="font-extrabold text-slate-800 text-base leading-tight group-hover:text-blue-600 transition-colors">{product.name}</h3>
+                                            <p className="text-xs text-slate-500 mt-1.5 leading-relaxed line-clamp-2">{product.description || product.category}</p>
                                         </div>
 
-                                        <div className="flex justify-between items-end mt-2">
-                                            <span className="font-extrabold text-lg text-slate-900">{formatCurrency(product.priceFilial)}</span>
+                                        <div className="flex justify-between items-center mt-3 pt-2 border-t border-slate-50">
+                                            <span className="font-black text-[17px] text-slate-900">
+                                                {formatCurrency(product.priceFilial)}
+                                            </span>
 
                                             <button
-                                                className="bg-slate-900 text-white px-4 py-2 rounded-lg text-sm font-bold shadow hover:bg-slate-800 active:scale-95 transition-all"
+                                                className="w-8 h-8 flex items-center justify-center bg-blue-50 text-blue-600 rounded-full hover:bg-blue-600 hover:text-white active:scale-95 transition-all shadow-sm group-hover:bg-blue-600 group-hover:text-white"
                                             >
-                                                Adicionar
+                                                <Plus size={18} strokeWidth={3} />
                                             </button>
                                         </div>
                                     </div>
