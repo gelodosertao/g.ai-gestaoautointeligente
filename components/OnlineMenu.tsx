@@ -497,7 +497,8 @@ const OnlineMenu: React.FC<OnlineMenuProps> = ({ onBack }) => {
         });
 
         if (missingOptions && missingOptions.length > 0) {
-            setToastMessage(`Selecione ${missingOptions[0].name} para continuar.`);
+            setToastMessage(`Atenção: Selecione a opção "${missingOptions[0].name}" para continuar.`);
+            setTimeout(() => setToastMessage(null), 3500);
             return;
         }
 
@@ -832,10 +833,10 @@ const OnlineMenu: React.FC<OnlineMenuProps> = ({ onBack }) => {
                                         <p className="font-bold text-slate-800 mt-1">{new Date(order.createdAt).toLocaleDateString('pt-BR')} às {new Date(order.createdAt).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}</p>
                                     </div>
                                     <div className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider ${order.status === 'PENDING' ? 'bg-orange-100 text-orange-700' :
-                                            order.status === 'PREPARING' ? 'bg-blue-100 text-blue-700' :
-                                                order.status === 'READY' ? 'bg-emerald-100 text-emerald-700' :
-                                                    order.status === 'DELIVERED' ? 'bg-slate-200 text-slate-700' :
-                                                        'bg-red-100 text-red-700'
+                                        order.status === 'PREPARING' ? 'bg-blue-100 text-blue-700' :
+                                            order.status === 'READY' ? 'bg-emerald-100 text-emerald-700' :
+                                                order.status === 'DELIVERED' ? 'bg-slate-200 text-slate-700' :
+                                                    'bg-red-100 text-red-700'
                                         }`}>
                                         {order.status === 'PENDING' ? 'Aguardando' :
                                             order.status === 'PREPARING' ? 'Em Preparo' :
@@ -866,7 +867,7 @@ const OnlineMenu: React.FC<OnlineMenuProps> = ({ onBack }) => {
         <div className="min-h-screen bg-slate-50 pb-28 md:pb-0 relative font-sans">
             {/* Toast */}
             {toastMessage && (
-                <div className="fixed top-20 left-1/2 -translate-x-1/2 z-50 bg-slate-800/90 backdrop-blur text-white px-6 py-3 rounded-full text-sm font-bold shadow-xl animate-in fade-in slide-in-from-top-4">
+                <div className="fixed top-20 left-1/2 -translate-x-1/2 z-[100] bg-red-600/95 backdrop-blur text-white px-6 py-3 rounded-full text-sm font-bold shadow-xl animate-in fade-in slide-in-from-top-4 text-center">
                     {toastMessage}
                 </div>
             )}
