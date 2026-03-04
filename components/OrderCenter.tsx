@@ -3,6 +3,8 @@ import { Order, Sale, Branch } from '../types';
 import { dbOrders, dbSales, dbProducts } from '../services/db';
 import { Clock, CheckCircle, Truck, XCircle, ChefHat, ArrowRight, RefreshCw, Store, MapPin, Phone, DollarSign, Calendar, Printer } from 'lucide-react';
 import { getTodayDate } from '../services/utils';
+import html2canvas from 'html2canvas';
+import { hardwareBridge } from '../services/hardwareBridge';
 
 interface OrderCenterProps {
     onBack: () => void;
@@ -12,6 +14,7 @@ interface OrderCenterProps {
 const OrderCenter: React.FC<OrderCenterProps> = ({ onBack, tenantId }) => {
     const [orders, setOrders] = useState<Order[]>([]);
     const [isLoading, setIsLoading] = useState(true);
+    const [orderToPrint, setOrderToPrint] = useState<Order | null>(null);
     const lastOrderCountRef = React.useRef(0);
     const [currentTime, setCurrentTime] = useState(Date.now()); // For updating timers
 
@@ -62,6 +65,44 @@ const OrderCenter: React.FC<OrderCenterProps> = ({ onBack, tenantId }) => {
             clearInterval(timerInterval);
         };
     }, []);
+
+    // Print to JPG effect
+    React.useEffect(() => {
+        if (orderToPrint) {
+            const printToJpg = async () => {
+                await new Promise(resolve => setTimeout(resolve, 100));
+                const receiptElement = document.getElementById('printable-order-receipt-content');
+                if (!receiptElement) {
+                    setOrderToPrint(null);
+                    return;
+                }
+
+                try {
+                    const canvas = await html2canvas(receiptElement, {
+                        scale: 2,
+                        backgroundColor: '#ffffff'
+                    });
+                    const image = canvas.toDataURL("image/jpeg", 0.9);
+                    const printedNatively = hardwareBridge.printReceipt(image);
+
+                    if (printedNatively) {
+                        alert("Enviado para impressora da maquininha!");
+                    } else {
+                        const link = document.createElement('a');
+                        link.href = image;
+                        link.download = `Pedido-${orderToPrint.id}.jpg`;
+                        link.click();
+                    }
+                } catch (e) {
+                    console.error("Erro ao gerar imagem do pedido", e);
+                    alert("Erro ao imprimir o pedido.");
+                } finally {
+                    setOrderToPrint(null);
+                }
+            };
+            printToJpg();
+        }
+    }, [orderToPrint]);
 
     const formatElapsedTime = (timestamp: number) => {
         const diff = currentTime - timestamp;
@@ -218,108 +259,7 @@ const OrderCenter: React.FC<OrderCenterProps> = ({ onBack, tenantId }) => {
     };
 
     const handlePrintOrder = (order: Order) => {
-        const printWindow = window.open('', '_blank');
-        if (!printWindow) return;
-
-        const date = new Date(order.createdAt).toLocaleString('pt-BR');
-
-        let itemsHtml = '';
-        order.items.forEach(item => {
-            itemsHtml += `
-                <div style="margin-bottom: 8px;">
-                    <div style="display: flex; justify-content: space-between; font-weight: bold;">
-                        <span>${item.quantity}x ${item.productName}</span>
-                    </div>
-                    ${item.selectedOptions && item.selectedOptions.length > 0 ? `<div style="padding-left: 10px; font-size: 12px; color: #444;">${item.selectedOptions.map(opt => `+ ${opt.choiceName}`).join('<br>')}</div>` : ''}
-                    ${item.notes ? `<div style="padding-left: 10px; font-size: 12px; font-style: italic;">Obs: ${item.notes}</div>` : ''}
-                </div>
-            `;
-        });
-
-        const addressHtml = order.deliveryMethod === 'DELIVERY' && order.address
-            ? `<div style="margin-top: 10px; padding-top: 10px; border-top: 1px dashed #000;">
-                <strong>Endereço de Entrega:</strong><br/>
-                ${order.address}
-               </div>`
-            : '';
-
-        const html = `
-            <html>
-                <head>
-                    <title>Pedido #${order.id.split('-')[0].toUpperCase()}</title>
-                    <style>
-                        body {
-                            font-family: monospace;
-                            width: 300px;
-                            margin: 0;
-                            padding: 10px;
-                            color: #000;
-                        }
-                        .header {
-                            text-align: center;
-                            border-bottom: 1px dashed #000;
-                            padding-bottom: 10px;
-                            margin-bottom: 10px;
-                        }
-                        .footer {
-                            border-top: 1px dashed #000;
-                            padding-top: 10px;
-                            margin-top: 10px;
-                            text-align: center;
-                            font-size: 12px;
-                        }
-                        .total {
-                            display: flex;
-                            justify-content: space-between;
-                            font-weight: bold;
-                            font-size: 16px;
-                            margin-top: 10px;
-                            border-top: 1px dashed #000;
-                            padding-top: 5px;
-                        }
-                    </style>
-                </head>
-                <body>
-                    <div class="header">
-                        <h2>GELO DO SERTÃO</h2>
-                        <p><strong>PEDIDO #${order.id.split('-')[0].toUpperCase()}</strong></p>
-                        <p>${date}</p>
-                    </div>
-                    
-                    <div style="margin-bottom: 10px; border-bottom: 1px dashed #000; padding-bottom: 10px;">
-                        <strong>Cliente:</strong> ${order.customerName}<br>
-                        <strong>Telefone:</strong> ${order.customerPhone || 'Não informado'}
-                    </div>
-
-                    <div>
-                        <strong>ITENS DO PEDIDO:</strong><br><br>
-                        ${itemsHtml}
-                    </div>
-
-                    ${addressHtml}
-
-                    <div class="total">
-                        <span>Total:</span>
-                        <span>${order.total.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</span>
-                    </div>
-                    <div style="font-size:12px; margin-top:5px;">Pagamento: ${order.paymentMethod}</div>
-
-                    <div class="footer">
-                        Obrigado pela preferência!
-                    </div>
-                </body>
-            </html>
-        `;
-
-        printWindow.document.write(html);
-        printWindow.document.close();
-        printWindow.focus();
-
-        // Timeout to allow content to load before printing
-        setTimeout(() => {
-            printWindow.print();
-            printWindow.close();
-        }, 250);
+        setOrderToPrint(order);
     };
 
     const columns = [
@@ -517,6 +457,64 @@ const OrderCenter: React.FC<OrderCenterProps> = ({ onBack, tenantId }) => {
                     </div>
                 )}
             </div>
+
+            {/* --- HIDDEN THERMAL RECEIPT (Visible only on Print or Download) --- */}
+            {orderToPrint && (
+                <div id="printable-order-receipt" className="fixed top-0 left-0 -z-50 opacity-0 pointer-events-none">
+                    <div id="printable-order-receipt-content" className="p-2 bg-white w-[58mm] text-[10px] font-mono text-black">
+                        <div className="text-center mb-2 border-b border-black pb-2">
+                            <h2 className="font-bold text-sm uppercase">GELO DO SERTÃO</h2>
+                            <p className="font-bold">PEDIDO #{orderToPrint.id.split('-')[0].toUpperCase()}</p>
+                            <p>{new Date(orderToPrint.createdAt).toLocaleString('pt-BR')}</p>
+                        </div>
+
+                        <div className="mb-2 border-b border-dashed border-black pb-2 text-left">
+                            <strong>Cliente:</strong> {orderToPrint.customerName}<br />
+                            <strong>Telefone:</strong> {orderToPrint.customerPhone || 'Não informado'}
+                        </div>
+
+                        <div className="mb-2 text-left">
+                            <strong className="block mb-1">ITENS DO PEDIDO:</strong>
+                            {orderToPrint.items.map((item, i) => (
+                                <div key={i} className="mb-1 leading-tight">
+                                    <div className="flex justify-between font-bold">
+                                        <span>{item.quantity}x {item.productName}</span>
+                                    </div>
+                                    {item.selectedOptions && item.selectedOptions.length > 0 && (
+                                        <div className="pl-2 text-[9px] text-gray-700">
+                                            {item.selectedOptions.map((opt, oIdx) => (
+                                                <div key={oIdx}>+ {opt.choiceName}</div>
+                                            ))}
+                                        </div>
+                                    )}
+                                    {item.notes && (
+                                        <div className="pl-2 text-[9px] italic">Obs: {item.notes}</div>
+                                    )}
+                                </div>
+                            ))}
+                        </div>
+
+                        {orderToPrint.deliveryMethod === 'DELIVERY' && orderToPrint.address && (
+                            <div className="mt-2 pt-2 border-t border-dashed border-black text-left">
+                                <strong>Endereço de Entrega:</strong><br />
+                                {orderToPrint.address}
+                            </div>
+                        )}
+
+                        <div className="flex justify-between items-center font-bold text-sm mt-3 border-t border-dashed border-black pt-1">
+                            <span>Total:</span>
+                            <span>{orderToPrint.total.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</span>
+                        </div>
+                        <div className="text-left text-[9px] mt-1">
+                            Pagamento: {orderToPrint.paymentMethod}
+                        </div>
+
+                        <div className="border-t border-dashed border-black pt-2 mt-2 text-center text-[9px]">
+                            <p>Obrigado pela preferência!</p>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 };

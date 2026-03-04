@@ -610,13 +610,19 @@ const Sales: React.FC<SalesProps> = ({ sales, products, customers, onAddSale, on
                   backgroundColor: '#ffffff'
                });
                const image = canvas.toDataURL("image/jpeg", 0.9);
-               const link = document.createElement('a');
-               link.href = image;
-               link.download = `Cupom - ${saleToDownload.id}.jpg`;
-               link.click();
+               const printedNatively = hardwareBridge.printReceipt(image);
+
+               if (printedNatively) {
+                  alert("Enviado para impressora da maquininha!");
+               } else {
+                  const link = document.createElement('a');
+                  link.href = image;
+                  link.download = `Cupom - ${saleToDownload.id}.jpg`;
+                  link.click();
+               }
             } catch (e) {
                console.error("Erro ao gerar imagem do cupom", e);
-               alert("Erro ao baixar o cupom.");
+               alert("Erro ao baixar ou imprimir o cupom.");
             } finally {
                setSaleToDownload(null);
             }
@@ -1431,7 +1437,7 @@ const Sales: React.FC<SalesProps> = ({ sales, products, customers, onAddSale, on
                               </div>
 
                               {/* Simulated Thermal Receipt */}
-                              <div id="receipt-content" className="bg-yellow-50 border border-yellow-100 p-6 rounded-lg font-mono text-xs text-slate-600 mb-6 shadow-inner max-h-80 overflow-y-auto mx-4">
+                              <div id="receipt-content" className="bg-yellow-50 border border-yellow-100 p-2 rounded-none font-mono text-[10px] text-black mb-6 shadow-inner overflow-hidden mx-auto w-[58mm] shrink-0">
                                  <div className="text-center mb-4 border-b border-yellow-200 pb-4">
                                     <p className="font-bold uppercase text-sm">Gelo do Sertão Ltda</p>
                                     <p>CNPJ: 00.000.000/0001-00</p>
@@ -1478,10 +1484,7 @@ const Sales: React.FC<SalesProps> = ({ sales, products, customers, onAddSale, on
 
                               <div className="flex gap-3">
                                  <button onClick={handleDownloadReceipt} className="flex-1 bg-blue-100 hover:bg-blue-200 text-blue-700 py-3 rounded-xl font-bold flex items-center justify-center gap-2">
-                                    <Download size={18} /> Baixar JPG
-                                 </button>
-                                 <button onClick={() => window.print()} className="flex-1 bg-slate-100 hover:bg-slate-200 text-slate-700 py-3 rounded-xl font-bold flex items-center justify-center gap-2">
-                                    <Printer size={18} /> Imprimir
+                                    <Download size={18} /> Baixar / Imprimir JPG
                                  </button>
                                  <button
                                     onClick={finishSale}
@@ -1564,8 +1567,8 @@ const Sales: React.FC<SalesProps> = ({ sales, products, customers, onAddSale, on
                               <p className="text-sm text-slate-500 mb-6">Chave:3523 1000 0000 0000 0000 5500 1000 0000 0100</p>
 
                               <div className="flex gap-3 w-full">
-                                 <button onClick={() => window.print()} className="flex-1 bg-slate-100 hover:bg-slate-200 text-slate-700 py-2 rounded-lg font-medium flex items-center justify-center gap-2">
-                                    <Printer size={18} /> Imprimir
+                                 <button onClick={() => setSaleToDownload(selectedSaleForInvoice)} className="flex-1 bg-slate-100 hover:bg-slate-200 text-slate-700 py-2 rounded-lg font-medium flex items-center justify-center gap-2">
+                                    <Printer size={18} /> Imprimir JPG
                                  </button>
                                  <button
                                     onClick={closeInvoiceModal}
@@ -1795,7 +1798,7 @@ const Sales: React.FC<SalesProps> = ({ sales, products, customers, onAddSale, on
          {/* --- HIDDEN THERMAL RECEIPT (Visible only on Print or Download) --- */}
          <div id="printable-receipt" className={saleToDownload ? "fixed top-0 left-0 z-[-1] opacity-0" : "hidden"}>
             {(lastCompletedSale || selectedSaleForInvoice || saleToDownload) && (
-               <div id="printable-receipt-content" className="p-4 bg-white w-[300px] text-xs font-mono">
+               <div id="printable-receipt-content" className="p-2 bg-white w-[58mm] text-[10px] font-mono text-black">
                   <div className="text-center mb-2 border-b border-black pb-2">
                      <h1 className="font-bold text-sm uppercase">Gelo do Sertão</h1>
                      <p>CNPJ: 00.000.000/0001-00</p>
@@ -1973,7 +1976,7 @@ const Sales: React.FC<SalesProps> = ({ sales, products, customers, onAddSale, on
 
          {/* --- HIDDEN RECEIPT FOR HISTORY DOWNLOAD --- */}
          {saleToDownload && (
-            <div id="printable-receipt-content" className="fixed top-0 left-0 -z-50 opacity-0 pointer-events-none bg-white p-4 text-black font-mono text-xs w-[350px]" style={{ fontFamily: '"Courier New", Courier, monospace' }}>
+            <div id="printable-receipt-content" className="fixed top-0 left-0 -z-50 opacity-0 pointer-events-none bg-white p-2 text-black font-mono text-[10px] w-[58mm]" style={{ fontFamily: '"Courier New", Courier, monospace' }}>
                <div className="text-center border-b-2 border-dashed border-black pb-4 mb-4">
                   <h2 className="font-bold text-lg uppercase mb-1">Gelo do Sertão</h2>
                   <p>CNPJ: 00.000.000/0001-00</p>
