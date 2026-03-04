@@ -340,6 +340,7 @@ const Inventory: React.FC<InventoryProps> = ({ products, sales, financials, onUp
       minStock: Number(newProductData.minStock || 10),
       packSize: newProductData.packSize ? Number(newProductData.packSize) : undefined,
       pricePack: newProductData.pricePack ? Number(newProductData.pricePack) : undefined,
+      expirationDate: newProductData.expirationDate || undefined,
       isStockControlled: newProductData.isStockControlled !== false, // Default true
 
       comboItems: newProductData.comboItems && newProductData.comboItems.length > 0 ? newProductData.comboItems : undefined,
@@ -617,6 +618,10 @@ const Inventory: React.FC<InventoryProps> = ({ products, sales, financials, onUp
                   const isLowFilial = product.stockFilial < product.minStock;
                   const isLow = branchFilter === 'GERAL' ? (isLowMatriz || isLowFilial) : (branchFilter === Branch.MATRIZ ? isLowMatriz : isLowFilial);
 
+                  const daysToExpiry = product.expirationDate ? (new Date(product.expirationDate).getTime() - new Date().getTime()) / (1000 * 3600 * 24) : null;
+                  const isExpired = daysToExpiry !== null && daysToExpiry < 0;
+                  const isExpiringSoon = daysToExpiry !== null && daysToExpiry >= 0 && daysToExpiry <= 30;
+
                   return (
                     <tr key={product.id} className="hover:bg-slate-50 transition-colors group">
                       <td className="p-5">
@@ -646,13 +651,22 @@ const Inventory: React.FC<InventoryProps> = ({ products, sales, financials, onUp
                         </td>
                       )}
                       <td className="p-5 text-center">
-                        {isLow ? (
-                          <span className="px-2 py-1 bg-red-100 text-red-700 rounded-full text-xs font-bold flex items-center justify-center gap-1">
-                            <AlertTriangle size={10} /> Baixo
-                          </span>
-                        ) : (
-                          <span className="px-2 py-1 bg-green-100 text-green-700 rounded-full text-xs font-bold">Normal</span>
-                        )}
+                        <div className="flex flex-col gap-1 items-center max-w-[80px] mx-auto">
+                          {isLow ? (
+                            <span className="px-2 py-1 bg-red-100 text-red-700 rounded-full text-[10px] font-bold w-full text-center">Baixo</span>
+                          ) : (
+                            <span className="px-2 py-1 bg-green-100 text-green-700 rounded-full text-[10px] font-bold w-full text-center">OK</span>
+                          )}
+                          {isExpired && (
+                            <span className="px-2 py-1 bg-rose-100 text-rose-700 rounded-full text-[10px] font-bold w-full text-center">Vencido</span>
+                          )}
+                          {isExpiringSoon && (
+                            <span className="px-2 py-1 bg-amber-100 text-amber-700 rounded-full text-[10px] font-bold w-full text-center">Vence Logo</span>
+                          )}
+                          {product.expirationDate && !isExpired && !isExpiringSoon && (
+                            <span className="text-[10px] text-slate-400 font-bold whitespace-nowrap">{new Date(product.expirationDate).toISOString().split('T')[0].split('-').reverse().join('/')}</span>
+                          )}
+                        </div>
                       </td>
                       <td className="p-5 text-right flex justify-end gap-2 items-center">
                         <button
@@ -916,7 +930,13 @@ const Inventory: React.FC<InventoryProps> = ({ products, sales, financials, onUp
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">Vencimento (Opc.)</label>
+                  <input type="date" className="w-full px-2 py-2 border border-slate-200 rounded-lg bg-white text-slate-900"
+                    value={newProductData.expirationDate || ''} onChange={e => setNewProductData({ ...newProductData, expirationDate: e.target.value })}
+                  />
+                </div>
                 <div>
                   <label className="block text-sm font-medium text-slate-700 mb-1">Categoria</label>
                   <select className="w-full px-4 py-2 border border-slate-200 rounded-lg bg-white text-slate-900"

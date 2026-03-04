@@ -206,7 +206,7 @@ const Sales: React.FC<SalesProps> = ({ sales, products, customers, onAddSale, on
 
 
    // Get available categories for filtering
-   const availableCategories = Array.from(new Set(products.map(p => p.category)));
+   const availableCategories = Array.from(new Set(products.map(p => p.category))).sort((a, b) => a.localeCompare(b));
 
    // Filter products for POS quick select
    // Logic: If Atacado (Matriz), SHOW ONLY ICE PRODUCTS.
@@ -787,7 +787,7 @@ const Sales: React.FC<SalesProps> = ({ sales, products, customers, onAddSale, on
                   <div className={`lg:col-span-2 flex flex-col gap-4 h-full overflow-hidden ${showMobileCart ? 'hidden lg:flex' : 'flex'} `}>
 
                      {/* Branch & Scanner - Compact Header */}
-                     <div className="bg-white p-3 rounded-2xl shadow-sm border border-slate-200 flex flex-col md:flex-row gap-3 items-center">
+                     <div className="bg-white p-2 md:p-3 rounded-xl md:rounded-2xl shadow-sm border border-slate-200 flex flex-col md:flex-row gap-2 md:gap-3 items-center">
                         {/* Scrollable container for branch and deposit controls on mobile */}
                         <div className="flex gap-2 w-full md:w-auto overflow-x-auto pb-1 md:pb-0 scrollbar-hide">
                            {/* Branch Switcher - Compact */}
@@ -825,7 +825,7 @@ const Sales: React.FC<SalesProps> = ({ sales, products, customers, onAddSale, on
                         </div>
 
                         {/* Scanner Input - Expanded */}
-                        <div className="flex-1 w-full relative flex gap-2">
+                        <div className="flex-1 w-full flex gap-1.5">
                            <div className="relative flex-1">
                               <ScanBarcode size={18} className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400" />
                               <input
@@ -905,7 +905,7 @@ const Sales: React.FC<SalesProps> = ({ sales, products, customers, onAddSale, on
                            </div>
                         )}
 
-                        <div className="flex-1 overflow-y-auto grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2 md:gap-3 pr-1 md:pr-2 content-start pb-24 md:pb-4">
+                        <div className="flex-1 overflow-y-auto grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2 md:gap-3 pr-1 md:pr-2 content-start pb-32 md:pb-4">
                            {filteredPosProducts.map(product => {
                               const stock = getProductStock(product);
                               const isWholesaleIce = product.category.includes('Gelo');

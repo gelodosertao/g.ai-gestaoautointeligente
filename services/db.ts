@@ -238,7 +238,8 @@ export const dbProducts = {
 
       operationalCost: row.operational_cost,
       options: row.options,
-      barcode: row.barcode
+      barcode: row.barcode,
+      expirationDate: row.expiration_date
     }));
   },
 
@@ -266,6 +267,7 @@ export const dbProducts = {
 
       options: product.options,
       barcode: product.barcode,
+      expiration_date: product.expirationDate,
       tenant_id: tenantId
     }]);
     if (error) throw error;
@@ -293,7 +295,8 @@ export const dbProducts = {
 
       operational_cost: product.operationalCost,
       options: product.options,
-      barcode: product.barcode
+      barcode: product.barcode,
+      expiration_date: product.expirationDate
     }).eq('id', product.id);
     if (error) throw error;
   },
