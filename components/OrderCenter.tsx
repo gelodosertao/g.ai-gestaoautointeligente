@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Order, Sale, Branch } from '../types';
 import { dbOrders, dbSales, dbProducts } from '../services/db';
-import { Clock, CheckCircle, Truck, XCircle, ChefHat, ArrowRight, RefreshCw, Store, MapPin, Phone, DollarSign, Calendar } from 'lucide-react';
+import { Clock, CheckCircle, Truck, XCircle, ChefHat, ArrowRight, RefreshCw, Store, MapPin, Phone, DollarSign, Calendar, Printer } from 'lucide-react';
 import { getTodayDate } from '../services/utils';
 
 interface OrderCenterProps {
@@ -217,6 +217,111 @@ const OrderCenter: React.FC<OrderCenterProps> = ({ onBack, tenantId }) => {
         }
     };
 
+    const handlePrintOrder = (order: Order) => {
+        const printWindow = window.open('', '_blank');
+        if (!printWindow) return;
+
+        const date = new Date(order.createdAt).toLocaleString('pt-BR');
+
+        let itemsHtml = '';
+        order.items.forEach(item => {
+            itemsHtml += `
+                <div style="margin-bottom: 8px;">
+                    <div style="display: flex; justify-content: space-between; font-weight: bold;">
+                        <span>${item.quantity}x ${item.productName}</span>
+                    </div>
+                    ${item.selectedOptions && item.selectedOptions.length > 0 ? `<div style="padding-left: 10px; font-size: 12px; color: #444;">${item.selectedOptions.map(opt => `+ ${opt.choiceName}`).join('<br>')}</div>` : ''}
+                    ${item.notes ? `<div style="padding-left: 10px; font-size: 12px; font-style: italic;">Obs: ${item.notes}</div>` : ''}
+                </div>
+            `;
+        });
+
+        const addressHtml = order.deliveryMethod === 'DELIVERY' && order.address
+            ? `<div style="margin-top: 10px; padding-top: 10px; border-top: 1px dashed #000;">
+                <strong>Endereço de Entrega:</strong><br/>
+                ${order.address}
+               </div>`
+            : '';
+
+        const html = `
+            <html>
+                <head>
+                    <title>Pedido #${order.id.split('-')[0].toUpperCase()}</title>
+                    <style>
+                        body {
+                            font-family: monospace;
+                            width: 300px;
+                            margin: 0;
+                            padding: 10px;
+                            color: #000;
+                        }
+                        .header {
+                            text-align: center;
+                            border-bottom: 1px dashed #000;
+                            padding-bottom: 10px;
+                            margin-bottom: 10px;
+                        }
+                        .footer {
+                            border-top: 1px dashed #000;
+                            padding-top: 10px;
+                            margin-top: 10px;
+                            text-align: center;
+                            font-size: 12px;
+                        }
+                        .total {
+                            display: flex;
+                            justify-content: space-between;
+                            font-weight: bold;
+                            font-size: 16px;
+                            margin-top: 10px;
+                            border-top: 1px dashed #000;
+                            padding-top: 5px;
+                        }
+                    </style>
+                </head>
+                <body>
+                    <div class="header">
+                        <h2>GELO DO SERTÃO</h2>
+                        <p><strong>PEDIDO #${order.id.split('-')[0].toUpperCase()}</strong></p>
+                        <p>${date}</p>
+                    </div>
+                    
+                    <div style="margin-bottom: 10px; border-bottom: 1px dashed #000; padding-bottom: 10px;">
+                        <strong>Cliente:</strong> ${order.customerName}<br>
+                        <strong>Telefone:</strong> ${order.customerPhone || 'Não informado'}
+                    </div>
+
+                    <div>
+                        <strong>ITENS DO PEDIDO:</strong><br><br>
+                        ${itemsHtml}
+                    </div>
+
+                    ${addressHtml}
+
+                    <div class="total">
+                        <span>Total:</span>
+                        <span>${order.total.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</span>
+                    </div>
+                    <div style="font-size:12px; margin-top:5px;">Pagamento: ${order.paymentMethod}</div>
+
+                    <div class="footer">
+                        Obrigado pela preferência!
+                    </div>
+                </body>
+            </html>
+        `;
+
+        printWindow.document.write(html);
+        printWindow.document.close();
+        printWindow.focus();
+
+        // Timeout to allow content to load before printing
+        setTimeout(() => {
+            printWindow.print();
+            printWindow.close();
+        }, 250);
+    };
+
     const columns = [
         { id: 'PENDING', label: 'Pendente', icon: <Clock size={20} />, bg: 'bg-yellow-50', border: 'border-yellow-200', text: 'text-yellow-800', badge: 'bg-yellow-100 text-yellow-700' },
         { id: 'PREPARING', label: 'Preparando', icon: <ChefHat size={20} />, bg: 'bg-blue-50', border: 'border-blue-200', text: 'text-blue-800', badge: 'bg-blue-100 text-blue-700' },
@@ -281,13 +386,21 @@ const OrderCenter: React.FC<OrderCenterProps> = ({ onBack, tenantId }) => {
                                                 <div className={`absolute top-0 left-0 bottom-0 w-1.5 ${col.text.replace('text', 'bg').replace('800', '500')}`}></div>
 
                                                 <div className="p-4 pl-5">
-                                                    {/* Top Row: ID & Timer */}
-                                                    <div className="flex justify-between items-start mb-3">
-                                                        <span className="font-mono font-bold text-slate-500 text-xs bg-slate-100 px-1.5 py-0.5 rounded">#{order.id.slice(-4)}</span>
-                                                        <div className="flex items-center gap-1 text-xs font-semibold text-slate-500 bg-slate-50 px-2 py-1 rounded-full border border-slate-100">
-                                                            <Clock size={12} />
-                                                            {formatElapsedTime(order.createdAt)}
+                                                    <div className="flex justify-between items-start mb-3 border-b border-slate-100 pb-2">
+                                                        <div className="flex items-center gap-2">
+                                                            <span className="font-mono font-bold text-slate-500 text-xs bg-slate-100 px-1.5 py-0.5 rounded">#{order.id.slice(-4)}</span>
+                                                            <div className="flex items-center gap-1 text-xs font-semibold text-slate-500 bg-slate-50 px-2 py-1 rounded-full border border-slate-100">
+                                                                <Clock size={12} />
+                                                                {formatElapsedTime(order.createdAt)}
+                                                            </div>
                                                         </div>
+                                                        <button
+                                                            onClick={() => handlePrintOrder(order)}
+                                                            className="p-1.5 bg-slate-100 text-slate-600 rounded hover:bg-slate-200 transition-colors"
+                                                            title="Imprimir Pedido"
+                                                        >
+                                                            <Printer size={14} />
+                                                        </button>
                                                     </div>
 
                                                     {/* Customer Info */}
