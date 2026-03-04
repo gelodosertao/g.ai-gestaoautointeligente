@@ -4,6 +4,7 @@ import { dbOrders, dbSales, dbProducts } from '../services/db';
 import { Clock, CheckCircle, Truck, XCircle, ChefHat, ArrowRight, RefreshCw, Store, MapPin, Phone, DollarSign, Calendar, Printer } from 'lucide-react';
 import { getTodayDate } from '../services/utils';
 import html2canvas from 'html2canvas';
+import { jsPDF } from 'jspdf';
 import { hardwareBridge } from '../services/hardwareBridge';
 
 interface OrderCenterProps {
@@ -88,14 +89,19 @@ const OrderCenter: React.FC<OrderCenterProps> = ({ onBack, tenantId }) => {
                     if (printedNatively) {
                         alert("Enviado para impressora da maquininha!");
                     } else {
-                        const link = document.createElement('a');
-                        link.href = image;
-                        link.download = `Pedido-${orderToPrint.id}.jpg`;
-                        link.click();
+                        const imgWidth = 58; // mm
+                        const pageHeight = (canvas.height * imgWidth) / canvas.width;
+                        const pdf = new jsPDF({
+                            orientation: "portrait",
+                            unit: "mm",
+                            format: [imgWidth, pageHeight]
+                        });
+                        pdf.addImage(image, 'JPEG', 0, 0, imgWidth, pageHeight);
+                        pdf.save(`Pedido-${orderToPrint.id}.pdf`);
                     }
                 } catch (e) {
-                    console.error("Erro ao gerar imagem do pedido", e);
-                    alert("Erro ao imprimir o pedido.");
+                    console.error("Erro ao gerar PDF do pedido", e);
+                    alert("Erro ao gerar arquivo PDF do pedido.");
                 } finally {
                     setOrderToPrint(null);
                 }
@@ -463,8 +469,10 @@ const OrderCenter: React.FC<OrderCenterProps> = ({ onBack, tenantId }) => {
                 <div id="printable-order-receipt" className="fixed top-0 left-0 -z-50 opacity-0 pointer-events-none">
                     <div id="printable-order-receipt-content" className="p-2 bg-white w-[58mm] text-[10px] font-mono text-black">
                         <div className="text-center mb-2 border-b border-black pb-2">
-                            <h2 className="font-bold text-sm uppercase">GELO DO SERTÃO</h2>
-                            <p className="font-bold">PEDIDO #{orderToPrint.id.split('-')[0].toUpperCase()}</p>
+                            <h2 className="font-bold text-[11px] uppercase leading-tight whitespace-pre-wrap">
+                                {orderToPrint.branch === Branch.FILIAL ? 'Gelo do Sertão |\nAdega & Drinks' : 'GELO DO SERTÃO'}
+                            </h2>
+                            <p className="font-bold border-t border-dashed border-black mt-1 pt-1">PEDIDO #{orderToPrint.id.split('-')[0].toUpperCase()}</p>
                             <p>{new Date(orderToPrint.createdAt).toLocaleString('pt-BR')}</p>
                         </div>
 

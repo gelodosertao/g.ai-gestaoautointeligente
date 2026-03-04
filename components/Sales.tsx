@@ -4,6 +4,7 @@ import { Sale, Branch, Product, Customer, User, PaymentEntry } from '../types';
 import { hardwareBridge } from '../services/hardwareBridge';
 import { ShoppingCart, FileText, CheckCircle, Clock, X, Printer, Send, ScanBarcode, Search, Trash2, Plus, Minus, CreditCard, Banknote, QrCode, Bluetooth, ArrowRight, Store, Factory, Calculator, User as UserIcon, UserPlus, Edit, Save, ArrowLeft, Download, Camera } from 'lucide-react';
 import html2canvas from 'html2canvas';
+import { jsPDF } from 'jspdf';
 import { BrowserMultiFormatReader } from '@zxing/library';
 import { getTodayDate } from '../services/utils';
 
@@ -581,12 +582,17 @@ const Sales: React.FC<SalesProps> = ({ sales, products, customers, onAddSale, on
             return;
          }
 
-         const link = document.createElement('a');
-         link.href = image;
-         link.download = `Cupom-${lastCompletedSale?.id || 'venda'}.jpg`;
-         link.click();
+         const imgWidth = 58;
+         const pageHeight = (canvas.height * imgWidth) / canvas.width;
+         const pdf = new jsPDF({
+            orientation: "portrait",
+            unit: "mm",
+            format: [imgWidth, pageHeight]
+         });
+         pdf.addImage(image, 'JPEG', 0, 0, imgWidth, pageHeight);
+         pdf.save(`Cupom-${lastCompletedSale?.id || 'venda'}.pdf`);
       } catch (e) {
-         console.error("Erro ao gerar imagem do cupom", e);
+         console.error("Erro ao gerar PDF do cupom", e);
          alert("Erro ao baixar o cupom.");
       }
    };
@@ -615,13 +621,18 @@ const Sales: React.FC<SalesProps> = ({ sales, products, customers, onAddSale, on
                if (printedNatively) {
                   alert("Enviado para impressora da maquininha!");
                } else {
-                  const link = document.createElement('a');
-                  link.href = image;
-                  link.download = `Cupom - ${saleToDownload.id}.jpg`;
-                  link.click();
+                  const imgWidth = 58;
+                  const pageHeight = (canvas.height * imgWidth) / canvas.width;
+                  const pdf = new jsPDF({
+                     orientation: "portrait",
+                     unit: "mm",
+                     format: [imgWidth, pageHeight]
+                  });
+                  pdf.addImage(image, 'JPEG', 0, 0, imgWidth, pageHeight);
+                  pdf.save(`Cupom-${saleToDownload.id}.pdf`);
                }
             } catch (e) {
-               console.error("Erro ao gerar imagem do cupom", e);
+               console.error("Erro ao gerar PDF do cupom", e);
                alert("Erro ao baixar ou imprimir o cupom.");
             } finally {
                setSaleToDownload(null);
@@ -1439,7 +1450,9 @@ const Sales: React.FC<SalesProps> = ({ sales, products, customers, onAddSale, on
                               {/* Simulated Thermal Receipt */}
                               <div id="receipt-content" className="bg-yellow-50 border border-yellow-100 p-2 rounded-none font-mono text-[10px] text-black mb-6 shadow-inner overflow-hidden mx-auto w-[58mm] shrink-0">
                                  <div className="text-center mb-4 border-b border-yellow-200 pb-4">
-                                    <p className="font-bold uppercase text-sm">Gelo do Sertão Ltda</p>
+                                    <h2 className="font-bold text-[11px] uppercase leading-tight whitespace-pre-wrap">
+                                       {selectedBranch === Branch.FILIAL ? 'Gelo do Sertão |\nAdega & Drinks' : 'Gelo do Sertão Ltda'}
+                                    </h2>
                                     <p>CNPJ: 00.000.000/0001-00</p>
                                     <p>Unidade: {selectedBranch}</p>
                                     <p className="mt-2 font-bold">Cliente: {lastCompletedSale?.customerName || 'Consumidor Final'}</p>
@@ -1484,7 +1497,7 @@ const Sales: React.FC<SalesProps> = ({ sales, products, customers, onAddSale, on
 
                               <div className="flex gap-3">
                                  <button onClick={handleDownloadReceipt} className="flex-1 bg-blue-100 hover:bg-blue-200 text-blue-700 py-3 rounded-xl font-bold flex items-center justify-center gap-2">
-                                    <Download size={18} /> Baixar / Imprimir JPG
+                                    <Download size={18} /> Baixar / Imprimir PDF
                                  </button>
                                  <button
                                     onClick={finishSale}
@@ -1568,7 +1581,7 @@ const Sales: React.FC<SalesProps> = ({ sales, products, customers, onAddSale, on
 
                               <div className="flex gap-3 w-full">
                                  <button onClick={() => setSaleToDownload(selectedSaleForInvoice)} className="flex-1 bg-slate-100 hover:bg-slate-200 text-slate-700 py-2 rounded-lg font-medium flex items-center justify-center gap-2">
-                                    <Printer size={18} /> Imprimir JPG
+                                    <Printer size={18} /> Imprimir PDF
                                  </button>
                                  <button
                                     onClick={closeInvoiceModal}
@@ -1800,7 +1813,9 @@ const Sales: React.FC<SalesProps> = ({ sales, products, customers, onAddSale, on
             {(lastCompletedSale || selectedSaleForInvoice || saleToDownload) && (
                <div id="printable-receipt-content" className="p-2 bg-white w-[58mm] text-[10px] font-mono text-black">
                   <div className="text-center mb-2 border-b border-black pb-2">
-                     <h1 className="font-bold text-sm uppercase">Gelo do Sertão</h1>
+                     <h2 className="font-bold text-[11px] uppercase leading-tight whitespace-pre-wrap">
+                        {(lastCompletedSale || selectedSaleForInvoice || saleToDownload)?.branch === Branch.FILIAL ? 'Gelo do Sertão |\nAdega & Drinks' : 'Gelo do Sertão Ltda'}
+                     </h2>
                      <p>CNPJ: 00.000.000/0001-00</p>
                      <p>{(lastCompletedSale || selectedSaleForInvoice || saleToDownload)?.branch}</p>
                      <p>Cliente: {(lastCompletedSale || selectedSaleForInvoice || saleToDownload)?.customerName}</p>
@@ -1978,7 +1993,9 @@ const Sales: React.FC<SalesProps> = ({ sales, products, customers, onAddSale, on
          {saleToDownload && (
             <div id="printable-receipt-content" className="fixed top-0 left-0 -z-50 opacity-0 pointer-events-none bg-white p-2 text-black font-mono text-[10px] w-[58mm]" style={{ fontFamily: '"Courier New", Courier, monospace' }}>
                <div className="text-center border-b-2 border-dashed border-black pb-4 mb-4">
-                  <h2 className="font-bold text-lg uppercase mb-1">Gelo do Sertão</h2>
+                  <h2 className="font-bold text-[11px] uppercase leading-tight whitespace-pre-wrap mb-1">
+                     {saleToDownload.branch === Branch.FILIAL ? 'Gelo do Sertão |\nAdega & Drinks' : 'Gelo do Sertão Ltda'}
+                  </h2>
                   <p>CNPJ: 00.000.000/0001-00</p>
                   <p>Rua Exemplo, 123 - Centro</p>
                   <p>Tel: (77) 99999-9999</p>
