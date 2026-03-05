@@ -388,14 +388,19 @@ const Sales: React.FC<SalesProps> = ({ sales, products, customers, onAddSale, on
       }));
    };
 
-   const handleBarcodeSubmit = (e: React.KeyboardEvent) => {
+   // Merged Scanner & Text Search Handler
+   const handleSearchKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
       if (e.key === 'Enter') {
-         const normalizedInput = barcodeInput.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
-         const product = products.find(p => p.id === barcodeInput || p.barcode === barcodeInput || p.name.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase() === normalizedInput);
-         if (product) {
-            handleProductClick(product);
-         } else {
-            alert("Produto não encontrado.");
+         const val = posSearchTerm.trim();
+         if (val) {
+            const normalizedInput = val.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+            const product = products.find(p => p.id === val || p.barcode === val || p.name.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase() === normalizedInput);
+            if (product) {
+               handleProductClick(product);
+               setPosSearchTerm('');
+            } else {
+               alert("Produto não encontrado.");
+            }
          }
       }
    };
@@ -803,100 +808,89 @@ const Sales: React.FC<SalesProps> = ({ sales, products, customers, onAddSale, on
                   {/* Left Column: Product Selection */}
                   <div className={`lg:col-span-2 flex flex-col gap-3 h-full overflow-hidden shrink-0 min-h-0 ${showMobileCart ? 'hidden lg:flex' : 'flex'} `}>
 
-                     {/* Branch & Scanner - Compact Header */}
-                     <div className="bg-white p-2.5 md:p-3 rounded-xl md:rounded-2xl shadow-sm border border-slate-200 flex flex-col md:flex-row gap-2.5 items-center shrink-0">
-                        {/* Scrollable container for branch and deposit controls on mobile */}
-                        <div className="flex gap-2.5 w-full md:w-auto overflow-x-auto pb-1 md:pb-0 scrollbar-hide">
-                           {/* Branch Switcher - Compact */}
-                           <div className="flex bg-slate-100 p-1 rounded-lg shrink-0">
-                              <button
-                                 onClick={() => { setSelectedBranch(Branch.FILIAL); setCart([]); setIsWholesale(false); }}
-                                 className={`px-3 py-1.5 rounded-md font-bold transition-all text-xs flex items-center gap-1.5 ${selectedBranch === Branch.FILIAL ? 'bg-white text-orange-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'} `}
-                              >
-                                 <Store size={14} /> <span className="whitespace-nowrap">Filial</span>
-                              </button>
-                              <button
-                                 onClick={() => { setSelectedBranch(Branch.MATRIZ); setCart([]); setIsWholesale(true); }}
-                                 className={`px-3 py-1.5 rounded-md font-bold transition-all text-xs flex items-center gap-1.5 ${selectedBranch === Branch.MATRIZ ? 'bg-white text-blue-700 shadow-sm' : 'text-slate-500 hover:text-slate-700'} `}
-                              >
-                                 <Factory size={14} /> <span className="whitespace-nowrap">Matriz</span>
-                              </button>
-                           </div>
-
-                           {selectedBranch === Branch.MATRIZ && (
+                     {/* Mobile Optimized Header: Branches + Unified Search */}
+                     <div className="bg-white p-2.5 md:p-3 rounded-xl md:rounded-2xl shadow-sm border border-slate-200 flex flex-col gap-2.5 shrink-0">
+                        {/* Top Row: Branches & Camera/BT */}
+                        <div className="flex justify-between items-center gap-2">
+                           {/* Scrollable container for branch and deposit controls */}
+                           <div className="flex gap-2 w-auto overflow-x-auto scrollbar-hide">
+                              {/* Branch Switcher - Compact */}
                               <div className="flex bg-slate-100 p-1 rounded-lg shrink-0">
                                  <button
-                                    onClick={() => { setSelectedDeposit('Ibotirama'); setCart([]); }}
-                                    className={`px-3 py-1.5 rounded-md font-bold transition-all text-xs flex items-center ${selectedDeposit === 'Ibotirama' ? 'bg-white text-blue-700 shadow-sm' : 'text-slate-500 hover:text-slate-700'} `}
+                                    onClick={() => { setSelectedBranch(Branch.FILIAL); setCart([]); setIsWholesale(false); }}
+                                    className={`px-3 py-1.5 rounded-md font-bold transition-all text-xs flex items-center gap-1.5 ${selectedBranch === Branch.FILIAL ? 'bg-white text-orange-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'} `}
                                  >
-                                    <span className="whitespace-nowrap">Ibotirama</span>
+                                    <Store size={14} /> <span className="whitespace-nowrap">Filial</span>
                                  </button>
                                  <button
-                                    onClick={() => { setSelectedDeposit('Barreiras'); setCart([]); }}
-                                    className={`px-3 py-1.5 rounded-md font-bold transition-all text-xs flex items-center ${selectedDeposit === 'Barreiras' ? 'bg-white text-blue-700 shadow-sm' : 'text-slate-500 hover:text-slate-700'} `}
+                                    onClick={() => { setSelectedBranch(Branch.MATRIZ); setCart([]); setIsWholesale(true); }}
+                                    className={`px-3 py-1.5 rounded-md font-bold transition-all text-xs flex items-center gap-1.5 ${selectedBranch === Branch.MATRIZ ? 'bg-white text-blue-700 shadow-sm' : 'text-slate-500 hover:text-slate-700'} `}
                                  >
-                                    <span className="whitespace-nowrap">Barreiras</span>
+                                    <Factory size={14} /> <span className="whitespace-nowrap">Matriz</span>
                                  </button>
                               </div>
-                           )}
+
+                              {selectedBranch === Branch.MATRIZ && (
+                                 <div className="flex bg-slate-100 p-1 rounded-lg shrink-0">
+                                    <button
+                                       onClick={() => { setSelectedDeposit('Ibotirama'); setCart([]); }}
+                                       className={`px-3 py-1.5 rounded-md font-bold transition-all text-xs flex items-center ${selectedDeposit === 'Ibotirama' ? 'bg-white text-blue-700 shadow-sm' : 'text-slate-500 hover:text-slate-700'} `}
+                                    >
+                                       <span className="whitespace-nowrap">Ibotirama</span>
+                                    </button>
+                                    <button
+                                       onClick={() => { setSelectedDeposit('Barreiras'); setCart([]); }}
+                                       className={`px-3 py-1.5 rounded-md font-bold transition-all text-xs flex items-center ${selectedDeposit === 'Barreiras' ? 'bg-white text-blue-700 shadow-sm' : 'text-slate-500 hover:text-slate-700'} `}
+                                    >
+                                       <span className="whitespace-nowrap">Barreiras</span>
+                                    </button>
+                                 </div>
+                              )}
+                           </div>
+
+                           <div className="flex gap-1.5 shrink-0">
+                              <button
+                                 onClick={startCamera}
+                                 className="flex items-center justify-center p-2 md:px-3 rounded-xl text-xs font-bold transition-all shrink-0 bg-blue-100 text-blue-700 hover:bg-blue-200"
+                              >
+                                 <Camera size={16} />
+                                 <span className="hidden md:inline ml-1.5">Câmera</span>
+                              </button>
+                              <button
+                                 onClick={handlePairScanner}
+                                 disabled={scannerStatus === 'CONNECTED'}
+                                 className={`flex items-center justify-center p-2 md:px-3 rounded-xl text-xs font-bold transition-all shrink-0
+                         ${scannerStatus === 'CONNECTED'
+                                       ? 'bg-green-100 text-green-700 cursor-default'
+                                       : scannerStatus === 'CONNECTING'
+                                          ? 'bg-amber-100 text-amber-700 animate-pulse'
+                                          : 'bg-slate-800 text-white hover:bg-slate-700'
+                                    } `}
+                              >
+                                 <Bluetooth size={16} />
+                                 <span className="hidden md:inline ml-1.5">{scannerStatus === 'CONNECTED' ? 'Pareado' : 'Leitor'}</span>
+                              </button>
+                           </div>
                         </div>
 
-                        {/* Scanner Input - Expanded */}
-                        <div className="flex-1 w-full flex gap-1.5">
-                           <div className="relative flex-1">
-                              <ScanBarcode size={18} className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400" />
-                              <input
-                                 ref={barcodeInputRef}
-                                 type="text"
-                                 value={barcodeInput}
-                                 onChange={(e) => setBarcodeInput(e.target.value)}
-                                 onKeyDown={handleBarcodeSubmit}
-                                 placeholder={scannerStatus === 'CONNECTED' ? "Escaneie..." : "Código ou Nome..."}
-                                 className={`w-full pl-9 pr-4 py-2 text-sm rounded-xl border transition-all outline-none ${scannerStatus === 'CONNECTED' ? 'border-green-500 bg-green-50/20' : 'border-slate-200 focus:border-orange-500'} `}
-                              />
-                           </div>
-                           <button
-                              onClick={startCamera}
-                              className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold transition-all shrink-0 bg-blue-100 text-blue-700 hover:bg-blue-200"
-                           >
-                              <Camera size={14} />
-                              <span className="hidden sm:inline">Câmera</span>
-                           </button>
-                           <button
-                              onClick={handlePairScanner}
-                              disabled={scannerStatus === 'CONNECTED'}
-                              className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold transition-all shrink-0
-                         ${scannerStatus === 'CONNECTED'
-                                    ? 'bg-green-100 text-green-700 cursor-default'
-                                    : scannerStatus === 'CONNECTING'
-                                       ? 'bg-amber-100 text-amber-700 animate-pulse'
-                                       : 'bg-slate-800 text-white hover:bg-slate-700'
-                                 } `}
-                           >
-                              <Bluetooth size={14} />
-                              <span className="hidden sm:inline">{scannerStatus === 'CONNECTED' ? 'Pareado' : 'Leitor'}</span>
-                           </button>
+                        {/* Search Input - Unified */}
+                        <div className="relative w-full">
+                           <Search size={18} className={`absolute left-3 top-1/2 transform -translate-y-1/2 ${scannerStatus === 'CONNECTED' ? 'text-green-500' : 'text-slate-400'} `} />
+                           {scannerStatus === 'CONNECTED' && <ScanBarcode size={18} className="absolute right-3 top-1/2 transform -translate-y-1/2 text-green-500" />}
+                           <input
+                              ref={barcodeInputRef}
+                              type="text"
+                              value={posSearchTerm}
+                              onChange={(e) => setPosSearchTerm(e.target.value)}
+                              onKeyDown={handleSearchKeyDown}
+                              placeholder={scannerStatus === 'CONNECTED' ? "Pressione o gatilho do leitor..." : "Buscar produto ou código de barras..."}
+                              className={`w-full pl-9 pr-4 py-2.5 text-sm font-medium rounded-xl border transition-all outline-none ${scannerStatus === 'CONNECTED' ? 'border-green-500 bg-green-50/20' : 'border-slate-200 focus:border-orange-500 bg-slate-50'} `}
+                           />
                         </div>
                      </div>
 
-                     {/* Product Grid Container */}
+                     {/* Product List/Grid Container */}
                      <div className="flex-1 bg-white p-3 md:p-4 rounded-xl md:rounded-2xl shadow-sm border border-slate-200 flex flex-col overflow-hidden min-h-0 relative">
-                        <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-3 gap-3 shrink-0">
-                           <h3 className="font-bold text-slate-700 text-sm md:text-base hidden sm:block">
-                              {selectedBranch === Branch.MATRIZ ? 'Catálogo Matriz' : 'Catálogo Varejo'}
-                           </h3>
-                           <div className="relative w-full md:w-auto md:min-w-[280px]">
-                              <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
-                              <input
-                                 type="text"
-                                 placeholder="Buscar produto ou categoria..."
-                                 value={posSearchTerm}
-                                 onChange={(e) => setPosSearchTerm(e.target.value)}
-                                 className="w-full pl-9 pr-3 py-2.5 md:py-2 text-sm border border-slate-200 rounded-xl bg-slate-50 focus:outline-none focus:ring-2 focus:ring-orange-500 transition-all font-medium placeholder:text-slate-400"
-                              />
-                           </div>
-                        </div>
-
                         {/* Category Filter */}
                         <div className="flex gap-2 mb-4 overflow-x-auto pb-2 scrollbar-hide">
                            <button
@@ -1054,21 +1048,21 @@ const Sales: React.FC<SalesProps> = ({ sales, products, customers, onAddSale, on
                            </div>
                         ) : (
                            cart.map((item) => (
-                              <div key={`${item.product.id} -${item.negotiatedPrice} `} className="bg-white p-3 rounded-xl border border-slate-200 shadow-sm flex justify-between items-center">
-                                 <div>
-                                    <p className="font-bold text-sm text-slate-800 line-clamp-1">{item.product.name}</p>
-                                    <p className="text-xs text-slate-500">
+                              <div key={`${item.product.id}-${item.negotiatedPrice}`} className="bg-white p-3 rounded-xl border border-slate-200 shadow-sm flex flex-col sm:flex-row justify-between sm:items-center gap-2">
+                                 <div className="flex-1">
+                                    <p className="font-bold text-sm text-slate-800 line-clamp-2 leading-tight">{item.product.name}</p>
+                                    <p className="text-xs text-slate-500 mt-0.5">
                                        {item.quantity} x {formatCurrency(getProductPrice(item))}
                                        {item.negotiatedPrice && <span className="text-blue-600 font-bold ml-1">(Neg)</span>}
                                        {item.isPack && <span className="text-purple-600 font-bold ml-1">(Fardo c/{item.product.packSize})</span>}
                                     </p>
                                  </div>
-                                 <div className="flex items-center gap-3">
-                                    <span className="font-bold text-slate-700 text-sm">{formatCurrency(item.quantity * getProductPrice(item))}</span>
-                                    <div className="flex items-center gap-1 bg-slate-100 rounded-lg p-0.5">
-                                       <button onClick={() => updateQuantity(item.product.id, -1, item.negotiatedPrice, item.isPack)} className="p-1 hover:bg-white rounded text-slate-600"><Minus size={12} /></button>
-                                       <button onClick={() => removeFromCart(item.product.id, item.negotiatedPrice, item.isPack)} className="p-1 hover:bg-rose-100 text-rose-500 rounded"><Trash2 size={12} /></button>
-                                       <button onClick={() => updateQuantity(item.product.id, 1, item.negotiatedPrice, item.isPack)} className="p-1 hover:bg-white rounded text-slate-600"><Plus size={12} /></button>
+                                 <div className="flex items-center justify-between sm:justify-end gap-3 w-full sm:w-auto mt-1 sm:mt-0 pt-2 sm:pt-0 border-t sm:border-0 border-slate-100">
+                                    <span className="font-bold text-slate-700 text-base sm:text-sm">{formatCurrency(item.quantity * getProductPrice(item))}</span>
+                                    <div className="flex items-center gap-1 bg-slate-100 rounded-lg p-1 sm:p-0.5">
+                                       <button onClick={() => updateQuantity(item.product.id, -1, item.negotiatedPrice, item.isPack)} className="w-8 h-8 sm:w-auto sm:h-auto sm:p-1 flex items-center justify-center hover:bg-white rounded text-slate-600 shadow-sm sm:shadow-none bg-white sm:bg-transparent"><Minus size={14} /></button>
+                                       <button onClick={() => removeFromCart(item.product.id, item.negotiatedPrice, item.isPack)} className="w-8 h-8 sm:w-auto sm:h-auto sm:p-1 flex items-center justify-center hover:bg-rose-100 text-rose-500 rounded"><Trash2 size={14} /></button>
+                                       <button onClick={() => updateQuantity(item.product.id, 1, item.negotiatedPrice, item.isPack)} className="w-8 h-8 sm:w-auto sm:h-auto sm:p-1 flex items-center justify-center hover:bg-white rounded text-slate-600 shadow-sm sm:shadow-none bg-white sm:bg-transparent"><Plus size={14} /></button>
                                     </div>
                                  </div>
                               </div>

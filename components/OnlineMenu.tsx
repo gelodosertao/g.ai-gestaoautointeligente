@@ -29,7 +29,7 @@ const OnlineMenu: React.FC<OnlineMenuProps> = ({ onBack }) => {
 
     // Customization Modal State
     const [customizationProduct, setCustomizationProduct] = useState<Product | null>(null);
-    const [selectedOptions, setSelectedOptions] = useState<Record<string, { choiceName: string, priceChange: number, isCheckbox?: boolean, optionGroup?: string }>>({});
+    const [selectedOptions, setSelectedOptions] = useState<Record<string, { choiceName: string, priceChange: number, isCheckbox?: boolean, optionGroup?: string, quantity?: number }>>({});
     const [customizationNotes, setCustomizationNotes] = useState('');
     const [customizationQty, setCustomizationQty] = useState(1);
 
@@ -459,7 +459,7 @@ const OnlineMenu: React.FC<OnlineMenuProps> = ({ onBack }) => {
                 if (newState[key]) {
                     delete newState[key];
                 } else {
-                    newState[key] = { choiceName: choice.name, priceChange: choice.priceChange || 0, isCheckbox: true, optionGroup: optionName };
+                    newState[key] = { choiceName: choice.name, priceChange: choice.priceChange || 0, isCheckbox: true, optionGroup: optionName, quantity: 1 };
 
                     if (isSemAlcool) {
                         // Remove alcohol options when Sem Álcool is selected
@@ -484,13 +484,35 @@ const OnlineMenu: React.FC<OnlineMenuProps> = ({ onBack }) => {
         }
     };
 
+    const handleOptionQuantity = (e: React.MouseEvent, optionName: string, choiceName: string, delta: number) => {
+        e.stopPropagation();
+        const key = `${optionName}:${choiceName}`;
+        setSelectedOptions(prev => {
+            const newState = { ...prev };
+            if (newState[key]) {
+                const currentQty = newState[key].quantity || 1;
+                const newQty = currentQty + delta;
+
+                if (newQty <= 0) {
+                    delete newState[key]; // if quantity <= 0, deselect
+                } else {
+                    newState[key] = { ...newState[key], quantity: newQty };
+                }
+            }
+            return newState;
+        });
+    };
+
     const confirmCustomization = () => {
         // Collect options
-        const optionsList = Object.entries(selectedOptions).map(([key, val]: any) => ({
-            optionName: val.optionGroup || key, // For checkbox, use group name
-            choiceName: val.choiceName,
-            priceChange: val.priceChange
-        }));
+        const optionsList = Object.entries(selectedOptions).map(([key, val]: any) => {
+            const qty = val.quantity && val.quantity > 1 ? val.quantity : 1;
+            return {
+                optionName: val.optionGroup || key, // For checkbox, use group name
+                choiceName: qty > 1 ? `${qty}x ${val.choiceName}` : val.choiceName,
+                priceChange: val.priceChange * qty
+            };
+        });
 
         // Validate required options
         const missingOptions = customizationProduct!.options?.filter(opt => {
@@ -941,21 +963,43 @@ const OnlineMenu: React.FC<OnlineMenuProps> = ({ onBack }) => {
                                                 ? selectedOptions[option.name]?.choiceName === choice.name
                                                 : selectedOptions[`${option.name}:${choice.name}`] !== undefined;
 
+                                            const qty = isSelected && option.type === 'checkbox' ? (selectedOptions[`${option.name}:${choice.name}`]?.quantity || 1) : 1;
+                                            const allowQuantity = option.type === 'checkbox' && ['GELO', 'CIGARRO', 'PALHEIRO'].some(kw => option.name.toUpperCase().includes(kw));
+
                                             return (
                                                 <div
                                                     key={cIdx}
                                                     onClick={() => handleOptionSelect(option.name, choice as any, option.type)}
-                                                    className={`p-3 rounded-xl border flex justify-between items-center cursor-pointer transition-all ${isSelected ? 'border-blue-500 bg-blue-50' : 'border-slate-200 hover:bg-slate-50'}`}
+                                                    className={`p-3 rounded-xl border flex flex-col justify-center cursor-pointer transition-all ${isSelected ? 'border-blue-500 bg-blue-50' : 'border-slate-200 hover:bg-slate-50'}`}
                                                 >
-                                                    <div className="flex items-center gap-3">
-                                                        <div className={`w-5 h-5 rounded-full border flex items-center justify-center ${isSelected ? 'border-blue-500 bg-blue-500' : 'border-slate-300'}`}>
-                                                            {isSelected && <div className="w-2 h-2 rounded-full bg-white" />}
+                                                    <div className="flex justify-between items-center w-full">
+                                                        <div className="flex items-center gap-3">
+                                                            <div className={`w-5 h-5 rounded-full border flex items-center justify-center ${isSelected ? 'border-blue-500 bg-blue-500' : 'border-slate-300'}`}>
+                                                                {isSelected && <div className="w-2 h-2 rounded-full bg-white" />}
+                                                            </div>
+                                                            <span className={isSelected ? 'font-bold text-blue-900' : 'text-slate-700'}>{choice.name}</span>
                                                         </div>
-                                                        <span className={isSelected ? 'font-bold text-blue-900' : 'text-slate-700'}>{choice.name}</span>
+                                                        {choice.priceChange ? (
+                                                            <span className="text-sm font-medium text-slate-500">+{formatCurrency(choice.priceChange * qty)}</span>
+                                                        ) : null}
                                                     </div>
-                                                    {choice.priceChange ? (
-                                                        <span className="text-sm font-medium text-slate-500">+{formatCurrency(choice.priceChange)}</span>
-                                                    ) : null}
+
+                                                    {isSelected && allowQuantity && (
+                                                        <div className="mt-3 flex items-center justify-between pt-3 border-t border-blue-200/50" onClick={(e) => e.stopPropagation()}>
+                                                            <span className="text-xs text-blue-800 font-semibold uppercase">Quantidade:</span>
+                                                            <div className="flex items-center bg-white border border-blue-200 rounded-lg p-0.5 shadow-sm">
+                                                                <button
+                                                                    onClick={(e) => handleOptionQuantity(e, option.name, choice.name, -1)}
+                                                                    className="w-8 h-8 flex items-center justify-center rounded text-blue-600 hover:bg-blue-50 active:bg-blue-100 transition-colors"
+                                                                ><Minus size={14} /></button>
+                                                                <span className="w-8 text-center text-sm font-bold text-blue-900">{qty}</span>
+                                                                <button
+                                                                    onClick={(e) => handleOptionQuantity(e, option.name, choice.name, 1)}
+                                                                    className="w-8 h-8 flex items-center justify-center rounded text-blue-600 hover:bg-blue-50 active:bg-blue-100 transition-colors"
+                                                                ><Plus size={14} /></button>
+                                                            </div>
+                                                        </div>
+                                                    )}
                                                 </div>
                                             );
                                         })}
@@ -991,7 +1035,7 @@ const OnlineMenu: React.FC<OnlineMenuProps> = ({ onBack }) => {
                             >
                                 <span>Adicionar</span>
                                 <span>{formatCurrency(
-                                    (customizationProduct.priceFilial + Object.values(selectedOptions).reduce((s: number, o: any) => s + (o.priceChange || 0), 0)) * customizationQty
+                                    (customizationProduct.priceFilial + Object.values(selectedOptions).reduce((s: number, o: any) => s + ((o.priceChange * (o.quantity || 1)) || 0), 0)) * customizationQty
                                 )}</span>
                             </button>
                         </div>
