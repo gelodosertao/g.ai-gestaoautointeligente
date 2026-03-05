@@ -892,8 +892,8 @@ const OnlineMenu: React.FC<OnlineMenuProps> = ({ onBack }) => {
 
             {/* Customization Modal */}
             {customizationProduct && (
-                <div className="fixed inset-0 z-50 flex items-end md:items-center justify-center bg-black/50 backdrop-blur-sm animate-in fade-in">
-                    <div className="bg-white w-full md:max-w-md md:rounded-2xl rounded-t-3xl shadow-2xl max-h-[90vh] overflow-hidden flex flex-col animate-in slide-in-from-bottom duration-300">
+                <div className="fixed inset-0 z-50 flex items-end md:items-center justify-center bg-black/50 backdrop-blur-sm animate-in fade-in" style={{ overscrollBehavior: 'none' }}>
+                    <div className="bg-white w-full md:max-w-md md:rounded-2xl rounded-t-3xl shadow-2xl max-h-[85vh] md:max-h-[90vh] overflow-hidden flex flex-col animate-in slide-in-from-bottom duration-300">
                         {/* Header */}
                         <div className="p-4 border-b border-slate-100 flex justify-between items-center bg-slate-50">
                             <h3 className="font-bold text-lg text-slate-800">Personalizar</h3>
@@ -901,7 +901,7 @@ const OnlineMenu: React.FC<OnlineMenuProps> = ({ onBack }) => {
                         </div>
 
                         {/* Content */}
-                        <div className="flex-1 overflow-y-auto p-4 space-y-6">
+                        <div className="flex-1 overflow-y-auto overscroll-contain p-4 space-y-6 pb-12">
                             {/* Product Info */}
                             <div className="flex gap-4 items-center">
                                 <div className="w-16 h-16 bg-slate-100 rounded-lg overflow-hidden shrink-0">

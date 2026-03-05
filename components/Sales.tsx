@@ -710,85 +710,85 @@ const Sales: React.FC<SalesProps> = ({ sales, products, customers, onAddSale, on
 
                   return matchesSearch && matchesStatus;
                }).map(sale => (
-                  <div key={sale.id} className="bg-white p-5 rounded-2xl shadow-sm border border-slate-200 flex flex-col md:flex-row justify-between items-start md:items-center hover:border-blue-200 transition-colors">
-                     <div className="flex gap-4 items-center">
-                        <div className={`p-3 rounded-full ${sale.branch === Branch.MATRIZ ? 'bg-blue-100 text-blue-600' : 'bg-orange-100 text-orange-600'} `}>
-                           {sale.branch === Branch.MATRIZ ? <Factory size={20} /> : <Store size={20} />}
+                  <div key={sale.id} className="bg-white p-4 md:p-5 rounded-2xl shadow-sm border border-slate-200 flex flex-col md:flex-row justify-between items-start hover:border-blue-200 transition-all gap-4">
+                     <div className="flex gap-3 md:gap-4 items-start w-full md:w-auto">
+                        <div className={`p-3 rounded-xl shrink-0 ${sale.branch === Branch.MATRIZ ? 'bg-blue-100 text-blue-600' : 'bg-orange-100 text-orange-600'} `}>
+                           {sale.branch === Branch.MATRIZ ? <Factory size={22} /> : <Store size={22} />}
                         </div>
-                        <div>
-                           <h4 className="font-bold text-slate-800">{sale.customerName}</h4>
-                           <p className="text-sm text-slate-500">
-                              {sale.date}
-                              {sale.createdAt && ` - ${new Date(sale.createdAt).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}`}
-                              {' • '}
-                              <span className={`font-bold ${sale.branch === Branch.MATRIZ ? 'text-blue-600' : 'text-orange-600'} `}>{sale.branch}</span>
+                        <div className="flex-1 min-w-0">
+                           <h4 className="font-bold text-slate-800 text-base md:text-lg mb-0.5 truncate">{sale.customerName}</h4>
+                           <p className="text-xs md:text-sm text-slate-500 flex flex-wrap items-center gap-1.5">
+                              <span>{sale.date}</span>
+                              {sale.createdAt && <span className="hidden sm:inline">- {new Date(sale.createdAt).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}</span>}
+                              <span className="hidden sm:inline">•</span>
+                              <span className={`font-bold px-2 py-0.5 rounded-md text-[10px] sm:text-xs ${sale.branch === Branch.MATRIZ ? 'bg-blue-50 text-blue-700' : 'bg-orange-50 text-orange-700'}`}>{sale.branch}</span>
                            </p>
-                           <div className="text-xs text-slate-400 mt-1">
+                           <div className="text-xs text-slate-400 mt-2 line-clamp-2 md:line-clamp-none leading-relaxed">
                               {sale.items.map(i => `${i.quantity}x ${i.productName} `).join(', ')}
                            </div>
                         </div>
                      </div>
 
-                     <div className="mt-4 md:mt-0 flex flex-col items-end gap-2 w-full md:w-auto">
-                        <div className="text-right">
-                           <span className="font-bold text-lg text-slate-800 block">{formatCurrency(sale.total)}</span>
+                     <div className="mt-2 md:mt-0 flex flex-col items-start md:items-end w-full md:w-auto pt-3 md:pt-0 border-t border-slate-100 md:border-0 border-dashed">
+                        <div className="flex justify-between md:justify-end items-center w-full mb-3 md:mb-1">
+                           <span className="font-black text-xl md:text-lg text-slate-800">{formatCurrency(sale.total)}</span>
                            {sale.status === 'Pending' && (
-                              <span className="text-xs font-bold text-red-600 block">
-                                 Restante: {formatCurrency(sale.total - (sale.amountPaid || 0))}
+                              <span className="text-xs font-bold text-red-600 ml-3 bg-red-50 px-2 py-1 rounded-lg border border-red-100">
+                                 Deve: {formatCurrency(sale.total - (sale.amountPaid || 0))}
                               </span>
                            )}
                         </div>
-                        <div className="flex gap-2 flex-wrap justify-end">
-                           <span className={`px-2 py-0.5 rounded text-xs font-bold border flex items-center gap-1 ${sale.status === 'Completed' ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : sale.status === 'Pending' ? 'bg-yellow-50 text-yellow-700 border-yellow-200' : 'bg-red-50 text-red-700 border-red-200'} `}>
+                        <div className="flex gap-1.5 flex-wrap justify-start md:justify-end">
+                           <span className={`px-2 py-1 rounded-md text-[10px] md:text-xs font-bold border flex items-center gap-1 ${sale.status === 'Completed' ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : sale.status === 'Pending' ? 'bg-amber-50 text-amber-700 border-amber-200' : 'bg-red-50 text-red-700 border-red-200'} `}>
                               {sale.status === 'Completed' ? 'Concluído' : sale.status === 'Pending' ? 'Pendente' : 'Cancelado'}
                            </span>
-                           <span className={`px-2 py-0.5 rounded text-xs font-bold border flex items-center gap-1 ${sale.hasInvoice ? 'bg-green-50 text-green-700 border-green-200' : 'bg-amber-50 text-amber-700 border-amber-200'} `}>
+                           <span className={`px-2 py-1 rounded-md text-[10px] md:text-xs font-bold border flex items-center gap-1 ${sale.hasInvoice ? 'bg-green-50 text-green-700 border-green-200' : 'bg-orange-50 text-orange-700 border-orange-200'} `}>
                               {sale.hasInvoice ? <CheckCircle size={10} /> : <Clock size={10} />}
                               {sale.hasInvoice ? 'NF-e Emitida' : 'Sem NF-e'}
                            </span>
-                           <span className="px-2 py-0.5 rounded text-xs font-bold bg-slate-100 text-slate-600 border border-slate-200">
+                           <span className="px-2 py-1 rounded-md text-[10px] md:text-xs font-bold bg-slate-50 text-slate-600 border border-slate-200">
                               {sale.paymentMethod}
                            </span>
                         </div>
-                        <div className="flex gap-2 mt-2">
+                        <div className="flex flex-wrap gap-2 mt-3 md:justify-end w-full">
                            {sale.status === 'Pending' && (
                               <button
                                  onClick={() => openDebtPaymentModal(sale)}
-                                 className="text-xs text-orange-600 font-bold hover:underline flex items-center gap-1 cursor-pointer bg-orange-50 px-2 py-1 rounded hover:bg-orange-100 transition-colors border border-orange-200"
+                                 className="flex-1 md:flex-none justify-center text-xs font-bold text-orange-700 flex items-center gap-1.5 cursor-pointer bg-orange-50 px-3 py-2 rounded-lg hover:bg-orange-100 transition-colors border border-orange-200 shadow-sm"
                               >
-                                 <Banknote size={12} /> Pagar/Baixar
+                                 <Banknote size={14} /> Receber
                               </button>
                            )}
                            {!sale.hasInvoice ? (
                               <button
                                  onClick={() => handleOpenInvoice(sale)}
-                                 className="text-xs text-blue-600 font-bold hover:underline flex items-center gap-1 cursor-pointer bg-blue-50 px-2 py-1 rounded hover:bg-blue-100 transition-colors"
+                                 className="flex-1 md:flex-none justify-center text-xs text-blue-700 font-bold flex items-center gap-1.5 cursor-pointer bg-blue-50 px-3 py-2 rounded-lg hover:bg-blue-100 transition-colors shadow-sm"
                               >
-                                 <FileText size={12} /> Emitir Nota
+                                 <FileText size={14} /> Emitir NF
                               </button>
                            ) : (
                               <button
                                  onClick={() => setSaleToDownload(sale)}
-                                 className="text-xs text-slate-400 font-medium hover:text-slate-600 flex items-center gap-1 cursor-pointer"
+                                 className="flex-1 md:flex-none justify-center text-xs text-slate-500 font-bold flex items-center gap-1.5 cursor-pointer bg-slate-100 px-3 py-2 rounded-lg hover:bg-slate-200 transition-colors"
                               >
-                                 <Download size={12} /> Baixar DANFE
+                                 <Download size={14} /> DANFE
                               </button>
                            )}
                            {currentUser.role === 'ADMIN' && (
-                              <>
+                              <div className="flex gap-2 flex-1 md:flex-none min-w-full md:min-w-0 mt-1 md:mt-0">
                                  <button
                                     onClick={() => openEditSaleModal(sale)}
-                                    className="text-xs text-slate-400 font-medium hover:text-blue-600 flex items-center gap-1 cursor-pointer"
+                                    className="flex-1 md:flex-none justify-center text-xs text-slate-600 font-bold flex items-center gap-1.5 cursor-pointer bg-slate-50 border border-slate-200 px-3 py-2 rounded-lg hover:bg-slate-100 hover:text-blue-600 transition-colors"
                                  >
-                                    <Edit size={12} /> Editar
+                                    <Edit size={14} /> Editar
                                  </button>
                                  <button
                                     onClick={() => onDeleteSale(sale.id)}
-                                    className="text-xs text-slate-400 font-medium hover:text-red-600 flex items-center gap-1 cursor-pointer"
+                                    className="flex-1 md:flex-none justify-center text-xs text-slate-600 font-bold flex items-center gap-1.5 cursor-pointer bg-slate-50 border border-slate-200 px-3 py-2 rounded-lg hover:bg-red-50 hover:text-red-600 hover:border-red-200 transition-colors"
                                  >
-                                    <Trash2 size={12} /> Excluir
+                                    <Trash2 size={14} /> Excluir
                                  </button>
-                              </>
+                              </div>
                            )}
                         </div>
                      </div>
@@ -797,16 +797,16 @@ const Sales: React.FC<SalesProps> = ({ sales, products, customers, onAddSale, on
             </div>
          ) : (
             // --- POS (POINT OF SALE) VIEW ---
-            <div className="relative h-[calc(100vh-140px)] md:h-[calc(100vh-12rem)]">
-               <div className="flex flex-col lg:grid lg:grid-cols-3 gap-6 h-full">
+            <div className="relative h-[calc(100vh-140px)] md:h-[calc(100vh-12rem)] pb-4 md:pb-0">
+               <div className="flex flex-col lg:grid lg:grid-cols-3 gap-4 lg:gap-6 h-full">
 
                   {/* Left Column: Product Selection */}
-                  <div className={`lg:col-span-2 flex flex-col gap-4 h-full overflow-hidden ${showMobileCart ? 'hidden lg:flex' : 'flex'} `}>
+                  <div className={`lg:col-span-2 flex flex-col gap-3 h-full overflow-hidden shrink-0 min-h-0 ${showMobileCart ? 'hidden lg:flex' : 'flex'} `}>
 
                      {/* Branch & Scanner - Compact Header */}
-                     <div className="bg-white p-2 md:p-3 rounded-xl md:rounded-2xl shadow-sm border border-slate-200 flex flex-col md:flex-row gap-2 md:gap-3 items-center">
+                     <div className="bg-white p-2.5 md:p-3 rounded-xl md:rounded-2xl shadow-sm border border-slate-200 flex flex-col md:flex-row gap-2.5 items-center shrink-0">
                         {/* Scrollable container for branch and deposit controls on mobile */}
-                        <div className="flex gap-2 w-full md:w-auto overflow-x-auto pb-1 md:pb-0 scrollbar-hide">
+                        <div className="flex gap-2.5 w-full md:w-auto overflow-x-auto pb-1 md:pb-0 scrollbar-hide">
                            {/* Branch Switcher - Compact */}
                            <div className="flex bg-slate-100 p-1 rounded-lg shrink-0">
                               <button
@@ -879,20 +879,20 @@ const Sales: React.FC<SalesProps> = ({ sales, products, customers, onAddSale, on
                         </div>
                      </div>
 
-                     {/* Product Grid */}
-                     <div className="flex-1 bg-white p-4 rounded-2xl shadow-sm border border-slate-200 flex flex-col overflow-hidden min-h-0">
-                        <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-4 gap-3">
-                           <h3 className="font-bold text-slate-700 text-sm md:text-base shrink-0">
+                     {/* Product Grid Container */}
+                     <div className="flex-1 bg-white p-3 md:p-4 rounded-xl md:rounded-2xl shadow-sm border border-slate-200 flex flex-col overflow-hidden min-h-0 relative">
+                        <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-3 gap-3 shrink-0">
+                           <h3 className="font-bold text-slate-700 text-sm md:text-base hidden sm:block">
                               {selectedBranch === Branch.MATRIZ ? 'Catálogo Matriz' : 'Catálogo Varejo'}
                            </h3>
-                           <div className="relative w-full md:w-auto">
+                           <div className="relative w-full md:w-auto md:min-w-[280px]">
                               <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
                               <input
                                  type="text"
-                                 placeholder="Buscar produto..."
+                                 placeholder="Buscar produto ou categoria..."
                                  value={posSearchTerm}
                                  onChange={(e) => setPosSearchTerm(e.target.value)}
-                                 className="w-full pl-9 pr-3 py-2 text-sm border border-slate-200 rounded-xl bg-slate-50 focus:outline-none focus:ring-2 focus:ring-orange-500 transition-all"
+                                 className="w-full pl-9 pr-3 py-2.5 md:py-2 text-sm border border-slate-200 rounded-xl bg-slate-50 focus:outline-none focus:ring-2 focus:ring-orange-500 transition-all font-medium placeholder:text-slate-400"
                               />
                            </div>
                         </div>
@@ -918,11 +918,11 @@ const Sales: React.FC<SalesProps> = ({ sales, products, customers, onAddSale, on
 
                         {filteredPosProducts.length === 0 && (
                            <div className="flex-1 flex flex-col items-center justify-center text-slate-400">
-                              <p>Nenhum produto.</p>
+                              <p className="text-sm font-medium">Nenhum produto encontrado.</p>
                            </div>
                         )}
 
-                        <div className="flex-1 overflow-y-auto grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2 md:gap-3 pr-1 md:pr-2 content-start pb-32 md:pb-4">
+                        <div className="flex-1 overflow-y-auto grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-2.5 sm:gap-3 pr-1 md:pr-2 content-start pb-20 md:pb-4">
                            {filteredPosProducts.map(product => {
                               const stock = getProductStock(product);
                               const isWholesaleIce = product.category.includes('Gelo');
@@ -1103,9 +1103,9 @@ const Sales: React.FC<SalesProps> = ({ sales, products, customers, onAddSale, on
                         <button
                            onClick={initiateCheckout}
                            disabled={cart.length === 0}
-                           className={`w-full text-white py-3 rounded-xl font-bold flex items-center justify-center gap-2 shadow-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed ${selectedBranch === Branch.MATRIZ ? 'bg-blue-800 hover:bg-blue-700 shadow-blue-900/20' : 'bg-orange-500 hover:bg-orange-600 shadow-orange-900/20'} `}
+                           className={`w-full text-white py-3.5 rounded-xl font-bold flex items-center justify-center gap-2 shadow-lg hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.98] transition-all disabled:opacity-50 disabled:cursor-not-allowed ${selectedBranch === Branch.MATRIZ ? 'bg-blue-700 hover:bg-blue-600 shadow-blue-900/20' : 'bg-orange-500 hover:bg-orange-400 shadow-orange-900/20'} `}
                         >
-                           Finalizar (F2)
+                           Finalizar Pedido (F2)
                         </button>
                      </div>
                   </div>
