@@ -996,28 +996,30 @@ const OnlineMenu: React.FC<OnlineMenuProps> = ({ onBack }) => {
 
                 <div className={`relative z-10 ${settings?.coverImage ? 'pt-10' : 'bg-white shadow-sm border-b border-slate-100'}`}>
                     <div className="px-5 py-4 flex flex-col items-center gap-2 text-center relative">
-                        <button
-                            onClick={() => {
-                                setStep('TRACKING');
-                                loadMyOrders();
-                            }}
-                            className={`absolute top-4 right-5 flex items-center gap-2 px-4 py-2 rounded-full backdrop-blur-md shadow-md transition-all hover:scale-105 active:scale-95 font-bold text-xs tracking-wide ${settings?.coverImage ? 'bg-black/40 text-white border border-white/20 hover:bg-black/60' : 'bg-white text-blue-700 border border-blue-100 hover:bg-blue-50 hover:shadow-lg'}`}
-                            title="Acompanhar Meus Pedidos"
-                        >
-                            <Package size={16} /> Meus Pedidos
-                        </button>
                         <h1 className={`font-black text-2xl tracking-tight ${settings?.coverImage ? 'text-white' : 'text-slate-800'}`}>
                             {settings?.storeName || 'Gelo do Sertão'}
                         </h1>
                         <p className={`text-sm font-medium flex items-center gap-1.5 ${settings?.coverImage ? 'text-white/80' : 'text-slate-500'}`}>
                             <MapPin size={14} /> {settings?.address || 'Cardápio Online'}
                         </p>
-                        {settings?.openingHours && (
-                            <div className="mt-1 flex items-center gap-1.5 text-xs font-bold text-green-700 bg-green-400/20 backdrop-blur-md px-3 py-1 rounded-full shadow-sm">
-                                <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></span>
-                                Aberto Agora
-                            </div>
-                        )}
+
+                        <div className="mt-2 flex items-center gap-3 flex-wrap justify-center w-full">
+                            {settings?.openingHours && (
+                                <div className="flex items-center gap-1.5 text-xs font-bold text-green-700 bg-green-400/20 backdrop-blur-md px-4 py-2 rounded-full shadow-sm">
+                                    <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></span>
+                                    Aberto Agora
+                                </div>
+                            )}
+                            <button
+                                onClick={() => {
+                                    setStep('TRACKING');
+                                    loadMyOrders();
+                                }}
+                                className={`flex items-center gap-1.5 px-4 py-2 rounded-full backdrop-blur-md shadow-sm transition-all hover:scale-105 active:scale-95 font-bold text-xs tracking-wide ${settings?.coverImage ? 'bg-black/40 text-white border border-white/20 hover:bg-black/60' : 'bg-white text-blue-600 border border-blue-200 shadow-blue-100 hover:bg-blue-50'}`}
+                            >
+                                <Package size={14} /> Meus Pedidos
+                            </button>
+                        </div>
                     </div>
 
                     {/* Glassmorphism Categories Scroll */}
