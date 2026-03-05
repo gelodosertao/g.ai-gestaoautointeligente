@@ -7,22 +7,26 @@ import { Product, StoreSettings, Sale, FinancialRecord, Customer, StockMovement,
 
 export const dbUsers = {
   async login(email: string, password: string): Promise<User> {
-    // 1. Query app_users directly
-    const { data: user, error } = await supabase
-      .from('app_users')
-      .select('*')
-      .eq('email', email)
-      .single();
+    // 1. Logar usando o Auth Oficial do Supabase
+    const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
+      email,
+      password,
+    });
 
-    if (error || !user) {
+    if (authError || !authData.user) {
+      console.error("Auth erro:", authError);
       throw new Error('Usuário não encontrado ou senha incorreta.');
     }
 
-    // 2. Simple password check (In production, use hashing!)
-    // Note: If you have old users with hashed passwords, this simple check might fail.
-    // We assume for this "fix" that we are storing passwords plainly or simply.
-    if (user.password !== password) {
-      throw new Error('Senha incorreta.');
+    // 2. Com a sessão gerada e protegida (JWT em mãos), puxar o perfil do usuário
+    const { data: user, error } = await supabase
+      .from('app_users')
+      .select('*')
+      .eq('id', authData.user.id)
+      .single();
+
+    if (error || !user) {
+      throw new Error('Perfil de usuário não localizado no sistema.');
     }
 
     // 3. Save to LocalStorage (Simple Session)
@@ -41,17 +45,6 @@ export const dbUsers = {
   },
 
   async register(user: { name: string, email: string, password: string, role: Role, allowedModules?: string[] }, existingTenantId?: string): Promise<User> {
-    // 1. Check if user exists
-    const { data: existing } = await supabase
-      .from('app_users')
-      .select('id')
-      .eq('email', user.email)
-      .single();
-
-    if (existing) {
-      throw new Error('Este email já está cadastrado.');
-    }
-
     let tenantId = existingTenantId;
 
     // 2. Create Tenant ONLY if not provided
@@ -69,11 +62,31 @@ export const dbUsers = {
       tenantId = tenant.id;
     }
 
-    // 3. Insert into app_users
+    // 3. Criar a conta oficial no Supabase Auth usando o Client Secundário
+    // (Avisando que, se um admin estiver logado e criando contas pra gerentes, o persistSession:false impede ele de ser deslogado!)
+    const { createClient } = await import('@supabase/supabase-js');
+    const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || 'https://licetziylggxtnoutjkn.supabase.co';
+    const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxpY2V0eml5bGdneHRub3V0amtuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjQ2ODQ2OTUsImV4cCI6MjA4MDI2MDY5NX0.olJiaq0HKZ3-DQlLjzBxodob9vaAxX2v9SaEmIRtO4w';
+    const registerClient = createClient(supabaseUrl, supabaseKey, { auth: { persistSession: false, autoRefreshToken: false } });
+
+    // Criar conta de autenticação
+    const { data: authData, error: authError } = await registerClient.auth.signUp({
+      email: user.email,
+      password: user.password
+    });
+
+    if (authError) {
+      throw new Error(authError.message === 'User already registered' ? 'Este email já está cadastrado.' : authError.message);
+    }
+
+    const authUid = authData.user!.id;
+
+    // 4. Inserir na app_users ligando ao UID do Auth
     const newUser = {
+      id: authUid,
       name: user.name,
       email: user.email,
-      password: user.password, // Storing plain text as requested for simplicity/revert
+      password: user.password, // Você ainda mantém aqui se quiser retrocompatibilidade até testar, depois ideal remover
       role: user.role,
       avatar_initials: user.name.substring(0, 2).toUpperCase(),
       tenant_id: tenantId,
@@ -87,16 +100,9 @@ export const dbUsers = {
       .single();
 
     if (error) {
-      console.error("Erro ao registrar:", error);
-      throw new Error("Erro ao criar conta: " + error.message);
+      console.error("Erro ao registrar perfíl:", error);
+      throw new Error("Conta Auth criada, mas falhou ao gravar perfil: " + error.message);
     }
-
-    // 3. Auto-login (Save to LocalStorage) - ONLY if it's a new self-registration (no existing tenant passed)
-    // If an admin is creating a user (existingTenantId passed), we probably don't want to auto-login as that new user immediately on this browser.
-
-    // However, the original code always returned sessionUser and set localStorage.
-    // We should preserve behavior for Login.tsx (self-registration) but maybe NOT set localStorage if it's an admin action?
-    // But the return type Promise<User> implies we return the created user.
 
     const sessionUser: User = {
       id: data.id,
@@ -110,6 +116,8 @@ export const dbUsers = {
 
     if (!existingTenantId) {
       localStorage.setItem('app_user', JSON.stringify(sessionUser));
+      // Precisamos avisar o client atual do Supabase caso seja auto-registro sem ser admin
+      await supabase.auth.signInWithPassword({ email: user.email, password: user.password });
     }
 
     return sessionUser;
@@ -163,11 +171,20 @@ export const dbUsers = {
   },
 
   async updatePassword(userId: string, newPassword: string): Promise<void> {
-    const { error } = await supabase
-      .from('app_users')
-      .update({ password: newPassword })
-      .eq('id', userId);
-    if (error) throw error;
+    // Atualiza a senha no Supabase Auth SE O USUÁRIO FOR O ATUAL LOGADO!
+    // Nota: O admin só poderia mudar a senha de um funcionário usando uma Edge Function com o SDK Service Role,
+    // Ou usando a API de admin: await registerClient.auth.admin.updateUserById(userId, {password: ...}) 
+    // Como a API de admin requer a SERVICE ROLE KEY que não temos no frontend de forma segura, 
+    // aqui nós assumiremos que isso atualiza a session atual ou a tabela app_users primária (para migrações futuras).
+
+    // Atualização ingênua (fallback):
+    await supabase.from('app_users').update({ password: newPassword }).eq('id', userId);
+
+    // Se o usuário solicitante é o logado, atualize seu Auth também:
+    const { data: { session } } = await supabase.auth.getSession();
+    if (session?.user.id === userId) {
+      await supabase.auth.updateUser({ password: newPassword });
+    }
   },
 
   async delete(userId: string): Promise<void> {

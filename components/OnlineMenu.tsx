@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Product, Order, Branch, StoreSettings } from '../types';
-import { ShoppingBag, Minus, Plus, X, Search, MapPin, CreditCard, Send, CheckCircle, ChevronLeft, Store, ListOrdered } from 'lucide-react';
+import { ShoppingBag, Minus, Plus, X, Search, MapPin, CreditCard, Send, CheckCircle, ChevronLeft, Store, ListOrdered, Package } from 'lucide-react';
 import { dbProducts, dbSettings, dbOrders, dbCustomers } from '../services/db';
 import { getTodayDate } from '../services/utils';
 
@@ -513,6 +513,21 @@ const OnlineMenu: React.FC<OnlineMenuProps> = ({ onBack }) => {
             if (!houseNumber.trim()) return alert("Por favor, digite o número do endereço.");
         }
 
+        // --- SISTEMA DE PROTEÇÃO CONTRA SPAM (RATE LIMITING) ---
+        const lastOrderTimeStr = localStorage.getItem('om_lastOrderTime');
+        const now = Date.now();
+        if (lastOrderTimeStr) {
+            const lastOrderTime = parseInt(lastOrderTimeStr, 10);
+            const tempoPassado = now - lastOrderTime;
+            const tempoMinimoEsperaMs = 3 * 60 * 1000; // 3 minutos de bloqueio preventivo (ajustável)
+
+            if (tempoPassado < tempoMinimoEsperaMs) {
+                const tempoRestanteSegundos = Math.ceil((tempoMinimoEsperaMs - tempoPassado) / 1000);
+                alert(`Por questões de segurança, aguarde mais ${tempoRestanteSegundos} segundos antes de enviar um novo pedido.`);
+                return;
+            }
+        }
+
         setIsProcessing(true);
 
         try {
@@ -554,6 +569,9 @@ const OnlineMenu: React.FC<OnlineMenuProps> = ({ onBack }) => {
 
             localStorage.setItem('om_customerName', customerName);
             localStorage.setItem('om_customerPhone', customerPhone);
+            // Salva o momento exato do envio do pedido
+            localStorage.setItem('om_lastOrderTime', now.toString());
+
             if (deliveryMethod === 'DELIVERY') {
                 localStorage.setItem('om_cep', cep);
                 localStorage.setItem('om_address', address);
@@ -983,10 +1001,10 @@ const OnlineMenu: React.FC<OnlineMenuProps> = ({ onBack }) => {
                                 setStep('TRACKING');
                                 loadMyOrders();
                             }}
-                            className={`absolute top-4 right-5 p-2 rounded-full backdrop-blur-md shadow-sm transition-all hover:scale-105 active:scale-95 ${settings?.coverImage ? 'bg-black/30 text-white' : 'bg-slate-100 text-slate-700'}`}
+                            className={`absolute top-4 right-5 flex items-center gap-2 px-4 py-2 rounded-full backdrop-blur-md shadow-md transition-all hover:scale-105 active:scale-95 font-bold text-xs tracking-wide ${settings?.coverImage ? 'bg-black/40 text-white border border-white/20 hover:bg-black/60' : 'bg-white text-blue-700 border border-blue-100 hover:bg-blue-50 hover:shadow-lg'}`}
                             title="Acompanhar Meus Pedidos"
                         >
-                            <ListOrdered size={20} />
+                            <Package size={16} /> Meus Pedidos
                         </button>
                         <h1 className={`font-black text-2xl tracking-tight ${settings?.coverImage ? 'text-white' : 'text-slate-800'}`}>
                             {settings?.storeName || 'Gelo do Sertão'}
