@@ -17,7 +17,7 @@ async function run() {
             description: 'Feito com a fruta, cachaça, açucar e gelo'
         },
         {
-            category: 'Caipirinhas Premium',
+            category: 'Caipiroska Premium',
             description: 'Feito com a fruta, Absolut e Licor 43, açucar e gelo'
         }
     ];
