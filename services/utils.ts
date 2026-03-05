@@ -45,15 +45,20 @@ export const BARREIRAS_FIXED_FEES: Record<string, number> = {
     'Boa Sorte': 8,
     'Bandeirantes': 10,
     'Vila dos Funcionários': 15,
+    'Vila dos Funcionarios': 15, // Alias without accent
     'Morada Nobre': 15,
     'Mimoso': 20,
     'Vila Brasil': 15,
     'Novo Horizonte': 15,
     'Serra do Mimo': 15,
     'Lot São Paulo': 8,
+    'Lot. São Paulo': 8, // Variant
+    'Loteamento São Paulo': 8, // Variant
     'Ribeirão': 15,
+    'Ribeirao': 15, // Alias without accent
     'Nova Barreiras': 20,
     'São Miguel': 15,
+    'Sao Miguel': 15, // Alias without accent
     'Santa Luzia': 15,
 };
 

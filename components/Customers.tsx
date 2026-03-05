@@ -25,7 +25,8 @@ const CUSTOMER_SEGMENTS = [
     'Geleiro',
     'Mercadinho',
     'Restaurante',
-    'Supermercado'
+    'Supermercado',
+    'Cardápio Digital'
 ];
 
 const Customers: React.FC<CustomersProps> = ({ customers, onAddCustomer, onImportCustomers, currentUser, onUpdateCustomer, onDeleteCustomer, onBack }) => {

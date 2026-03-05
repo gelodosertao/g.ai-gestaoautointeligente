@@ -55,6 +55,8 @@ const OnlineMenu: React.FC<OnlineMenuProps> = ({ onBack }) => {
     const [cep, setCep] = useState('');
     const [isSearchingCep, setIsSearchingCep] = useState(false);
     const [houseNumber, setHouseNumber] = useState('');
+    const [city, setCity] = useState('');
+    const [state, setState] = useState('');
 
     // Refs for scrolling
     const categoryScrollRef = useRef<HTMLDivElement>(null);
@@ -94,6 +96,8 @@ const OnlineMenu: React.FC<OnlineMenuProps> = ({ onBack }) => {
             if (!data.erro) {
                 const newAddress = `${data.logradouro}, ${data.bairro}, ${data.localidade} - ${data.uf}`;
                 setAddress(newAddress);
+                setCity(data.localidade);
+                setState(data.uf);
             } else {
                 alert("CEP não encontrado.");
             }
@@ -126,14 +130,14 @@ const OnlineMenu: React.FC<OnlineMenuProps> = ({ onBack }) => {
 
     // --- EFFECT: Debounce Address Calculation ---
     useEffect(() => {
-        if (deliveryMethod === 'DELIVERY' && address.length > 5 && settings?.deliveryPerKm) {
+        if (deliveryMethod === 'DELIVERY' && address.length > 5) {
             if (addressTypingTimeoutRef.current) clearTimeout(addressTypingTimeoutRef.current);
             setIsCalculatingFee(true);
             addressTypingTimeoutRef.current = setTimeout(() => {
                 calculateDeliveryFee(address);
             }, 1500);
         } else {
-            setDeliveryFee(settings?.deliveryBaseFee || 0);
+            setDeliveryFee(deliveryMethod === 'DELIVERY' ? (settings?.deliveryBaseFee || 0) : 0);
             setIsCalculatingFee(false);
         }
     }, [address, deliveryMethod, settings]);
@@ -626,21 +630,26 @@ const OnlineMenu: React.FC<OnlineMenuProps> = ({ onBack }) => {
             }
 
             try {
+                const params = new URLSearchParams(window.location.search);
+                const tenantId = params.get('tenantId') || '00000000-0000-0000-0000-000000000000';
                 const allCustomers = await dbCustomers.getAll(tenantId);
                 const exists = allCustomers.find(c => c.phone === customerPhone);
+
+                const customerData = {
+                    id: exists ? exists.id : crypto.randomUUID(),
+                    name: customerName,
+                    phone: customerPhone,
+                    address: fullAddress || exists?.address || '',
+                    city: city || exists?.city || '',
+                    state: state || exists?.state || '',
+                    segment: 'Cardápio Digital',
+                    branch: Branch.FILIAL
+                };
+
                 if (!exists) {
-                    await dbCustomers.add({
-                        id: crypto.randomUUID(),
-                        name: customerName,
-                        phone: customerPhone,
-                        address: fullAddress || '',
-                    }, tenantId);
-                } else if (deliveryMethod === 'DELIVERY' && fullAddress && exists.address !== fullAddress) {
-                    await dbCustomers.update({
-                        ...exists,
-                        name: customerName,
-                        address: fullAddress
-                    });
+                    await dbCustomers.add(customerData, tenantId);
+                } else {
+                    await dbCustomers.update(customerData);
                 }
             } catch (e) { console.error("Could not save customer", e); }
 

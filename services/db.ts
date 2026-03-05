@@ -523,7 +523,11 @@ export const dbCustomers = {
       cpfCnpj: row.cpf_cnpj,
       email: row.email,
       phone: row.phone,
-      address: row.address
+      address: row.address,
+      city: row.city,
+      state: row.state,
+      segment: row.segment,
+      branch: row.branch as Branch
     }));
   },
 
@@ -535,6 +539,10 @@ export const dbCustomers = {
       email: customer.email,
       phone: customer.phone,
       address: customer.address,
+      city: customer.city,
+      state: customer.state,
+      segment: customer.segment,
+      branch: customer.branch,
       tenant_id: tenantId
     }]);
     if (error) throw error;
@@ -549,6 +557,10 @@ export const dbCustomers = {
       email: c.email,
       phone: c.phone,
       address: c.address,
+      city: c.city,
+      state: c.state,
+      segment: c.segment,
+      branch: c.branch,
       tenant_id: tenantId
     }));
     const { error } = await supabase.from('customers').insert(rows);
@@ -561,7 +573,11 @@ export const dbCustomers = {
       cpf_cnpj: customer.cpfCnpj,
       email: customer.email,
       phone: customer.phone,
-      address: customer.address
+      address: customer.address,
+      city: customer.city,
+      state: customer.state,
+      segment: customer.segment,
+      branch: customer.branch
     }).eq('id', customer.id);
     if (error) throw error;
   },
