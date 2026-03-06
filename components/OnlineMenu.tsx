@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Product, Order, Branch, StoreSettings } from '../types';
-import { ShoppingBag, Minus, Plus, X, Search, MapPin, CreditCard, Send, CheckCircle, ChevronLeft, Store, ListOrdered, Package } from 'lucide-react';
+import { ShoppingBag, Minus, Plus, X, Search, MapPin, CreditCard, Send, CheckCircle, ChevronLeft, Store, ListOrdered, Package, Phone } from 'lucide-react';
 import { dbProducts, dbSettings, dbOrders, dbCustomers } from '../services/db';
 import { getTodayDate, getFixedFeeByNeighborhood } from '../services/utils';
 
@@ -1132,47 +1132,70 @@ const OnlineMenu: React.FC<OnlineMenuProps> = ({ onBack }) => {
                 </div>
             )}
 
-            {/* Compact Header */}
+            {/* Header Section */}
             <header className="relative z-20">
-                <div className={`relative z-10 ${settings?.coverImage ? 'pt-8' : 'bg-white/95 backdrop-blur shadow-sm border-b border-slate-100 pt-4'}`}>
-                    <div className="px-5 pb-4 flex flex-col items-center gap-1 text-center relative max-w-2xl mx-auto">
-                        {settings?.logoImage && (
-                            <div className="w-16 h-16 bg-white rounded-2xl shadow-lg p-1 -mt-10 mb-2 border border-slate-100 z-30">
-                                <img src={settings.logoImage} className="w-full h-full object-contain rounded-xl" alt="Logo" />
-                            </div>
-                        )}
-                        <h1 className={`font-black text-xl tracking-tight leading-tight ${settings?.coverImage ? 'text-white drop-shadow-lg' : 'text-slate-900'}`}>
+                {/* Cover Image fallback to Orange if no cover configured */}
+                <div className={`w-full h-32 md:h-48 relative overflow-hidden ${settings?.coverImage ? '' : 'bg-gradient-to-r from-orange-400 to-orange-600'}`}>
+                    {settings?.coverImage && (
+                        <img src={settings.coverImage} className="w-full h-full object-cover" alt="Cover" />
+                    )}
+                    <div className="absolute inset-0 bg-black/10"></div>
+                </div>
+
+                <div className="px-5 pb-4 flex flex-col items-center text-center relative max-w-2xl mx-auto -mt-12">
+                    {/* Profile Picture (Logo) */}
+                    <div className="w-24 h-24 bg-white rounded-full shadow-2xl p-1 border-4 border-white z-30 overflow-hidden">
+                        <img
+                            src={settings?.logoImage || '/menu_perfil.jpg'}
+                            className="w-full h-full object-cover rounded-full"
+                            alt="Logo"
+                        />
+                    </div>
+
+                    <div className="mt-3 bg-white/90 backdrop-blur-md p-4 rounded-2xl shadow-sm border border-slate-100 w-full">
+                        <h1 className="font-black text-2xl tracking-tight leading-tight text-slate-900">
                             {settings?.storeName || 'Gelo do Sertão'}
                         </h1>
-                        <div className="flex items-center gap-2 flex-wrap justify-center mt-0.5">
+
+                        <div className="flex items-center gap-2 flex-wrap justify-center mt-2">
                             {isOpen ? (
-                                <div className="flex items-center gap-1.5 text-[10px] font-black uppercase tracking-wider text-green-700 bg-green-500/20 backdrop-blur px-3 py-1 rounded-full border border-green-500/20">
+                                <div className="flex items-center gap-1.5 text-[10px] font-black uppercase tracking-wider text-green-700 bg-green-500/10 px-3 py-1.5 rounded-full border border-green-500/20">
                                     <span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse"></span>
-                                    Aberto Agora
+                                    Loja Aberta
                                 </div>
                             ) : (
-                                <div className="flex items-center gap-1.5 text-[10px] font-black uppercase tracking-wider text-white bg-red-600 px-3 py-1 rounded-full shadow-lg">
+                                <div className="flex items-center gap-1.5 text-[10px] font-black uppercase tracking-wider text-white bg-red-600 px-3 py-1.5 rounded-full shadow-lg">
                                     <span className="w-1.5 h-1.5 rounded-full bg-white animate-pulse"></span>
-                                    Fechado no Momento
+                                    Loja Fechada
                                 </div>
                             )}
                             {settings?.address && (
-                                <p className={`text-[10px] font-bold flex items-center gap-1 opacity-80 uppercase tracking-widest ${settings?.coverImage ? 'text-white' : 'text-slate-400'}`}>
+                                <p className="text-[10px] font-bold flex items-center gap-1 text-slate-400 uppercase tracking-widest">
                                     <MapPin size={9} /> {settings.address.split(',')[0]}
                                 </p>
                             )}
                         </div>
 
-                        <div className="mt-3 flex items-center gap-2 justify-center w-full">
+                        <div className="mt-4 flex items-center gap-2 justify-center w-full">
                             <button
                                 onClick={() => {
                                     setStep('TRACKING');
                                     loadMyOrders();
                                 }}
-                                className={`flex items-center gap-1 px-4 py-1.5 rounded-full backdrop-blur-md transition-all active:scale-95 font-black text-[10px] uppercase tracking-wider border ${settings?.coverImage ? 'bg-black/30 text-white border-white/30' : 'bg-slate-50 text-slate-700 border-slate-200'}`}
+                                style={{ color: settings?.primaryColor || '#0f172a', borderColor: `${settings?.primaryColor || '#0f172a'}30` }}
+                                className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl transition-all active:scale-95 font-black text-xs uppercase tracking-wider border bg-white shadow-sm"
                             >
-                                <Package size={12} /> Meus Pedidos
+                                <Package size={14} /> Meus Pedidos
                             </button>
+
+                            <a
+                                href={`https://wa.me/${settings?.phone || '557799914444'}`}
+                                target="_blank"
+                                rel="noreferrer"
+                                className="w-12 h-10 flex items-center justify-center rounded-xl bg-green-500 text-white shadow-lg active:scale-95 transition-all"
+                            >
+                                <Phone size={18} />
+                            </a>
                         </div>
                     </div>
 
