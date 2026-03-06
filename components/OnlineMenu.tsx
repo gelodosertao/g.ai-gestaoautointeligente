@@ -303,43 +303,56 @@ const OnlineMenu: React.FC<OnlineMenuProps> = ({ onBack }) => {
         if (!settings || !settings.businessHours || settings.businessHours.length === 0) return true;
 
         try {
-            // Get current time and weekday specifically in America/Bahia (UTC-3)
-            const formatter = new Intl.DateTimeFormat('en-US', {
-                timeZone: 'America/Bahia',
+            // Pegamos o horário e o dia atual no fuso de Brasília/Bahia
+            const now = new Date();
+            const bahiaTime = now.toLocaleTimeString("pt-BR", {
+                timeZone: "America/Bahia",
                 hour12: false,
                 hour: '2-digit',
-                minute: '2-digit',
-                weekday: 'long'
+                minute: '2-digit'
             });
+            const bahiaDay = now.toLocaleDateString("pt-BR", {
+                timeZone: "America/Bahia",
+                weekday: 'long'
+            }).toLowerCase();
 
-            const parts = formatter.formatToParts(new Date());
-            const hour = parts.find(p => p.type === 'hour')?.value || '00';
-            const minute = parts.find(p => p.type === 'minute')?.value || '00';
-            const weekdayEN = parts.find(p => p.type === 'weekday')?.value || '';
+            const [currentH, currentM] = bahiaTime.split(':').map(Number);
+            const currentTotalMin = currentH * 60 + currentM;
 
-            const currentTime = `${hour}:${minute}`;
-
-            // Map English weekday to Portuguese used in our settings
+            // Mapeamos o dia da semana para o formato salvo no banco
             const dayMap: Record<string, string> = {
-                'Monday': 'Segunda-feira',
-                'Tuesday': 'Terça-feira',
-                'Wednesday': 'Quarta-feira',
-                'Thursday': 'Quinta-feira',
-                'Friday': 'Sexta-feira',
-                'Saturday': 'Sábado',
-                'Sunday': 'Domingo'
+                'segunda-feira': 'Segunda-feira', 'terça-feira': 'Terça-feira', 'quarta-feira': 'Quarta-feira',
+                'quinta-feira': 'Quinta-feira', 'sexta-feira': 'Sexta-feira', 'sábado': 'Sábado',
+                'sabado': 'Sábado', 'domingo': 'Domingo'
             };
 
-            const currentDayName = dayMap[weekdayEN];
+            // Tratamento especial para browsers ou locais diferentes
+            let currentDayKey = bahiaDay;
+            // Se o dia vier sem "-feira", removemos a feira do mapa também para comparação
+            const matchedKey = Object.keys(dayMap).find(key =>
+                bahiaDay.includes(key.split('-')[0])
+            );
+
+            const currentDayName = matchedKey ? dayMap[matchedKey] : '';
             const dayConfig = settings.businessHours.find(h => h.day === currentDayName);
 
-            if (!dayConfig) return true; // Se não achar o dia, assume aberto para não travar vendas
+            if (!dayConfig) return true; // Se não houver configuração, deixa aberto
             if (!dayConfig.isOpen) return false;
 
-            return currentTime >= dayConfig.open && currentTime <= dayConfig.close;
+            const [openH, openM] = dayConfig.open.split(':').map(Number);
+            const [closeH, closeM] = dayConfig.close.split(':').map(Number);
+            const openTotalMin = openH * 60 + openM;
+            const closeTotalMin = closeH * 60 + closeM;
+
+            // Se o horário de fechamento for antes da abertura (ex: fechando às 02:00 da manhã do dia seguinte)
+            if (closeTotalMin < openTotalMin) {
+                return currentTotalMin >= openTotalMin || currentTotalMin <= closeTotalMin;
+            }
+
+            return currentTotalMin >= openTotalMin && currentTotalMin <= closeTotalMin;
         } catch (error) {
-            console.error("Erro ao validar horário de funcionamento:", error);
-            return true; // Em caso de erro, deixa o cardápio aberto (mais seguro comercialmente)
+            console.error("Erro ao validar horário:", error);
+            return true;
         }
     };
 
@@ -986,12 +999,13 @@ const OnlineMenu: React.FC<OnlineMenuProps> = ({ onBack }) => {
     // 3. MAIN MENU SCREEN (Default)
     return (
         <div
-            className="min-h-screen bg-slate-50 pb-28 md:pb-0 relative font-sans transition-all duration-700"
+            className="min-h-screen pb-28 md:pb-0 relative font-sans transition-all duration-700 bg-slate-50"
             style={settings?.backgroundImage ? {
                 backgroundImage: `url(${settings.backgroundImage})`,
                 backgroundAttachment: 'fixed',
                 backgroundSize: 'cover',
-                backgroundPosition: 'center'
+                backgroundPosition: 'center',
+                backgroundRepeat: 'no-repeat'
             } : {}}
         >
             {/* Toast */}
@@ -1105,7 +1119,8 @@ const OnlineMenu: React.FC<OnlineMenuProps> = ({ onBack }) => {
                             </div>
                             <button
                                 onClick={confirmCustomization}
-                                className="w-full bg-slate-900 text-white py-4 rounded-xl font-bold text-lg shadow-lg hover:bg-slate-800 active:scale-[0.98] transition-all flex justify-between px-6"
+                                style={{ backgroundColor: settings?.primaryColor || '#0f172a' }}
+                                className="w-full text-white py-4 rounded-xl font-bold text-lg shadow-lg hover:opacity-90 active:scale-[0.98] transition-all flex justify-between px-6"
                             >
                                 <span>Adicionar</span>
                                 <span>{formatCurrency(
@@ -1117,52 +1132,53 @@ const OnlineMenu: React.FC<OnlineMenuProps> = ({ onBack }) => {
                 </div>
             )}
 
-            {/* Premium Header / Hero */}
-            <div className="relative z-20">
-                {/* Optional Cover Background */}
-                {settings?.coverImage && (
-                    <div className="absolute inset-0 h-[220px] w-full overflow-hidden z-0">
-                        <img src={settings.coverImage} className="w-full h-full object-cover" alt="Cover" />
-                        <div className="absolute inset-0 bg-gradient-to-b from-black/70 via-black/40 to-slate-50"></div>
-                    </div>
-                )}
-
-                <div className={`relative z-10 ${settings?.coverImage ? 'pt-10' : 'bg-white shadow-sm border-b border-slate-100'}`}>
-                    <div className="px-5 py-4 flex flex-col items-center gap-2 text-center relative">
-                        <h1 className={`font-black text-2xl tracking-tight ${settings?.coverImage ? 'text-white' : 'text-slate-800'}`}>
+            {/* Compact Header */}
+            <header className="relative z-20">
+                <div className={`relative z-10 ${settings?.coverImage ? 'pt-8' : 'bg-white/95 backdrop-blur shadow-sm border-b border-slate-100 pt-4'}`}>
+                    <div className="px-5 pb-4 flex flex-col items-center gap-1 text-center relative max-w-2xl mx-auto">
+                        {settings?.logoImage && (
+                            <div className="w-16 h-16 bg-white rounded-2xl shadow-lg p-1 -mt-10 mb-2 border border-slate-100 z-30">
+                                <img src={settings.logoImage} className="w-full h-full object-contain rounded-xl" alt="Logo" />
+                            </div>
+                        )}
+                        <h1 className={`font-black text-xl tracking-tight leading-tight ${settings?.coverImage ? 'text-white drop-shadow-lg' : 'text-slate-900'}`}>
                             {settings?.storeName || 'Gelo do Sertão'}
                         </h1>
-                        <p className={`text-sm font-medium flex items-center gap-1.5 ${settings?.coverImage ? 'text-white/80' : 'text-slate-500'}`}>
-                            <MapPin size={14} /> {settings?.address || 'Cardápio Online'}
-                        </p>
-
-                        <div className="mt-2 flex items-center gap-3 flex-wrap justify-center w-full">
+                        <div className="flex items-center gap-2 flex-wrap justify-center mt-0.5">
                             {isOpen ? (
-                                <div className="flex items-center gap-1.5 text-xs font-bold text-green-700 bg-green-400/20 backdrop-blur-md px-4 py-2 rounded-full shadow-sm">
-                                    <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></span>
+                                <div className="flex items-center gap-1.5 text-[10px] font-black uppercase tracking-wider text-green-700 bg-green-500/20 backdrop-blur px-3 py-1 rounded-full border border-green-500/20">
+                                    <span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse"></span>
                                     Aberto Agora
                                 </div>
                             ) : (
-                                <div className="flex items-center gap-1.5 text-xs font-bold text-red-700 bg-red-400/20 backdrop-blur-md px-4 py-2 rounded-full shadow-sm">
-                                    <span className="w-2 h-2 rounded-full bg-red-500"></span>
+                                <div className="flex items-center gap-1.5 text-[10px] font-black uppercase tracking-wider text-white bg-red-600 px-3 py-1 rounded-full shadow-lg">
+                                    <span className="w-1.5 h-1.5 rounded-full bg-white animate-pulse"></span>
                                     Fechado no Momento
                                 </div>
                             )}
+                            {settings?.address && (
+                                <p className={`text-[10px] font-bold flex items-center gap-1 opacity-80 uppercase tracking-widest ${settings?.coverImage ? 'text-white' : 'text-slate-400'}`}>
+                                    <MapPin size={9} /> {settings.address.split(',')[0]}
+                                </p>
+                            )}
+                        </div>
+
+                        <div className="mt-3 flex items-center gap-2 justify-center w-full">
                             <button
                                 onClick={() => {
                                     setStep('TRACKING');
                                     loadMyOrders();
                                 }}
-                                className={`flex items-center gap-1.5 px-4 py-2 rounded-full backdrop-blur-md shadow-sm transition-all hover:scale-105 active:scale-95 font-bold text-xs tracking-wide ${settings?.coverImage ? 'bg-black/40 text-white border border-white/20 hover:bg-black/60' : 'bg-white text-blue-600 border border-blue-200 shadow-blue-100 hover:bg-blue-50'}`}
+                                className={`flex items-center gap-1 px-4 py-1.5 rounded-full backdrop-blur-md transition-all active:scale-95 font-black text-[10px] uppercase tracking-wider border ${settings?.coverImage ? 'bg-black/30 text-white border-white/30' : 'bg-slate-50 text-slate-700 border-slate-200'}`}
                             >
-                                <Package size={14} /> Meus Pedidos
+                                <Package size={12} /> Meus Pedidos
                             </button>
                         </div>
                     </div>
 
-                    {/* Glassmorphism Categories Scroll */}
-                    <div className="sticky top-0 z-30 bg-white/70 backdrop-blur-xl border-b border-white/50 shadow-[0_4px_20px_-10px_rgba(0,0,0,0.05)]">
-                        <div className="px-5 py-3 overflow-x-auto scrollbar-hide flex gap-2 items-center" ref={categoryScrollRef}>
+                    {/* Compact Categories Scroll */}
+                    <div className="sticky top-0 z-30 bg-white/90 backdrop-blur-md border-b border-slate-100">
+                        <div className="px-4 py-3 overflow-x-auto scrollbar-hide flex gap-2 items-center max-w-3xl mx-auto" ref={categoryScrollRef}>
                             {categories.map(cat => {
                                 const isActive = selectedCategory === cat;
                                 return (
@@ -1172,9 +1188,10 @@ const OnlineMenu: React.FC<OnlineMenuProps> = ({ onBack }) => {
                                             setSelectedCategory(cat);
                                             window.scrollTo({ top: 0, behavior: 'smooth' });
                                         }}
-                                        className={`px-4 py-2 text-sm font-bold whitespace-nowrap rounded-full transition-all duration-300 ease-out ${isActive
-                                            ? 'bg-blue-600 text-white shadow-md shadow-blue-500/30 scale-105'
-                                            : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-50 hover:border-slate-300'
+                                        style={isActive ? { backgroundColor: settings?.primaryColor || '#0f172a' } : {}}
+                                        className={`px-4 py-1.5 text-[11px] font-black uppercase tracking-wider whitespace-nowrap rounded-full transition-all duration-300 ${isActive
+                                            ? 'text-white shadow-lg scale-105'
+                                            : 'bg-slate-100 text-slate-500 border border-transparent hover:bg-slate-200'
                                             }`}
                                     >
                                         {cat}
@@ -1184,7 +1201,7 @@ const OnlineMenu: React.FC<OnlineMenuProps> = ({ onBack }) => {
                         </div>
                     </div>
                 </div>
-            </div>
+            </header>
 
             {/* Content */}
             <main className="max-w-3xl mx-auto p-4 space-y-6">
@@ -1195,7 +1212,8 @@ const OnlineMenu: React.FC<OnlineMenuProps> = ({ onBack }) => {
                     <input
                         type="text"
                         placeholder="Buscar produtos..."
-                        className="w-full pl-12 pr-4 py-3 bg-white border border-slate-200 rounded-xl shadow-sm text-slate-700 outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                        className="w-full pl-12 pr-4 py-3 bg-white border border-slate-200 rounded-xl shadow-sm text-slate-700 outline-none focus:ring-2 focus:border-transparent transition-all"
+                        style={{ '--tw-ring-color': settings?.primaryColor || '#2563eb' } as any}
                         value={searchTerm}
                         onChange={e => setSearchTerm(e.target.value)}
                     />
@@ -1211,7 +1229,8 @@ const OnlineMenu: React.FC<OnlineMenuProps> = ({ onBack }) => {
                             return (
                                 <div
                                     key={product.id}
-                                    className="bg-white p-3 rounded-2xl shadow-sm border border-slate-100 hover:shadow-md hover:border-blue-100 transition-all flex gap-4 animate-in slide-in-from-bottom-4 duration-500 group cursor-pointer"
+                                    style={qty > 0 ? { borderColor: `${settings?.primaryColor || '#2563eb'}40` } : {}}
+                                    className={`bg-white p-3 rounded-2xl shadow-sm border border-slate-100 hover:shadow-md transition-all flex gap-4 animate-in slide-in-from-bottom-4 duration-500 group cursor-pointer`}
                                     onClick={() => handleProductClick(product)}
                                 >
                                     {/* Premium Product Image */}
@@ -1224,7 +1243,10 @@ const OnlineMenu: React.FC<OnlineMenuProps> = ({ onBack }) => {
                                             </div>
                                         )}
                                         {qty > 0 && (
-                                            <div className="absolute -top-1 -right-1 bg-gradient-to-r from-blue-600 to-indigo-600 text-white text-[10px] font-black px-2 py-0.5 rounded-full shadow-md border-[3px] border-white">
+                                            <div
+                                                style={{ backgroundColor: settings?.primaryColor || '#2563eb' }}
+                                                className="absolute -top-1 -right-1 text-white text-[10px] font-black px-2 py-0.5 rounded-full shadow-md border-[3px] border-white"
+                                            >
                                                 {qty}
                                             </div>
                                         )}
@@ -1233,9 +1255,9 @@ const OnlineMenu: React.FC<OnlineMenuProps> = ({ onBack }) => {
                                     {/* Info & Controls */}
                                     <div className="flex-1 flex flex-col py-1 pr-1">
                                         <div className="mb-auto">
-                                            <h3 className="font-extrabold text-slate-800 text-base leading-tight group-hover:text-blue-600 transition-colors">{product.name}</h3>
+                                            <h3 className="font-extrabold text-slate-800 text-base leading-tight group-hover:opacity-80 transition-colors">{product.name}</h3>
                                             <p className="text-xs text-slate-500 mt-1.5 leading-relaxed line-clamp-2">
-                                                {product.description || (product.category === 'Batidas' ? 'Feito com a fruta, leite condensado, destilado e gelo' : product.category === 'Caipirinha' ? 'Feito com a fruta, cachaça, açucar e gelo' : product.category === 'Caipirinhas Premium' ? 'Feito com a fruta, Absolut e Licor 43, açucar e gelo' : product.category)}
+                                                {product.description || (product.category === 'Batidas' ? 'Feito com a fruta, leite condensado, destilado e gelo' : product.category === 'Caipiroska' ? 'Feito com a fruta, cachaça, açucar e gelo' : product.category === 'Caipiroska Premium' ? 'Feito com a fruta, Absolut e Licor 43, açucar e gelo' : product.category)}
                                             </p>
                                         </div>
 
@@ -1245,8 +1267,9 @@ const OnlineMenu: React.FC<OnlineMenuProps> = ({ onBack }) => {
                                             </span>
 
                                             <button
+                                                style={isOpen ? { backgroundColor: settings?.primaryColor || '#0f172a' } : {}}
                                                 className={`w-8 h-8 flex items-center justify-center rounded-full transition-all shadow-sm ${isOpen
-                                                    ? 'bg-blue-50 text-blue-600 hover:bg-blue-600 hover:text-white active:scale-95 group-hover:bg-blue-600 group-hover:text-white'
+                                                    ? 'text-white hover:opacity-90 active:scale-95'
                                                     : 'bg-slate-100 text-slate-400 cursor-not-allowed'}`}
                                             >
                                                 <Plus size={18} strokeWidth={3} />
@@ -1271,7 +1294,8 @@ const OnlineMenu: React.FC<OnlineMenuProps> = ({ onBack }) => {
                 <div className="fixed bottom-4 left-4 right-4 z-40 max-w-3xl mx-auto">
                     <button
                         onClick={() => setStep('CHECKOUT')}
-                        className="w-full bg-slate-900 text-white p-4 rounded-2xl shadow-2xl flex justify-between items-center animate-in slide-in-from-bottom-4 active:scale-[0.98] transition-all"
+                        style={{ backgroundColor: settings?.primaryColor || '#0f172a' }}
+                        className="w-full text-white p-4 rounded-2xl shadow-2xl flex justify-between items-center animate-in slide-in-from-bottom-4 active:scale-[0.98] transition-all"
                     >
                         <div className="flex items-center gap-3">
                             <div className="bg-white/20 w-10 h-10 rounded-full flex items-center justify-center font-bold backdrop-blur-sm">

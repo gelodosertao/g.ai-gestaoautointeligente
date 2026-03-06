@@ -24,7 +24,10 @@ const Reports = React.lazy(() => import('./components/Reports'));
 
 const App: React.FC = () => {
   const [currentUser, setCurrentUser] = useState<User | null>(null);
-  const [currentView, setCurrentView] = useState<ViewState>('DASHBOARD');
+  const [currentView, setCurrentView] = useState<ViewState>(() => {
+    const params = new URLSearchParams(window.location.search);
+    return params.get('menu') === 'true' ? 'ONLINE_MENU' : 'DASHBOARD';
+  });
 
   // Data States
   const [products, setProducts] = useState<Product[]>([]);
@@ -42,24 +45,25 @@ const App: React.FC = () => {
 
   // --- AUTH & INITIAL DATA ---
   useEffect(() => {
-    // Check for public menu access via URL
     const params = new URLSearchParams(window.location.search);
-    if (params.get('menu') === 'true') {
-      setCurrentView('ONLINE_MENU');
-    }
+    const isMenuMode = params.get('menu') === 'true';
 
     // Check for active session on load
     dbUsers.getCurrentUser().then(user => {
       if (user) {
         setCurrentUser(user);
-        let initialView: ViewState = 'DASHBOARD';
-        if (user.allowedModules && user.allowedModules.length > 0) {
-          initialView = user.allowedModules[0] as ViewState;
-        } else {
-          if (user.role === 'FACTORY') initialView = 'PRODUCTION';
-          else if (user.role === 'OPERATOR') initialView = 'SALES';
+
+        // Only change view if NOT in menu mode
+        if (!isMenuMode) {
+          let initialView: ViewState = 'DASHBOARD';
+          if (user.allowedModules && user.allowedModules.length > 0) {
+            initialView = user.allowedModules[0] as ViewState;
+          } else {
+            if (user.role === 'FACTORY') initialView = 'PRODUCTION';
+            else if (user.role === 'OPERATOR') initialView = 'SALES';
+          }
+          setCurrentView(initialView);
         }
-        setCurrentView(initialView);
       }
     });
   }, []);
