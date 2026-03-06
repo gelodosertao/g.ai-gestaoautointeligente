@@ -16,6 +16,11 @@ class ErrorBoundary extends Component<Props, State> {
         error: null,
         errorInfo: null
     };
+    public componentDidMount() {
+        if (!this.state.hasError) {
+            sessionStorage.removeItem('chunk_error_reload');
+        }
+    }
 
     public static getDerivedStateFromError(error: Error): State {
         return { hasError: true, error, errorInfo: null };
@@ -24,6 +29,23 @@ class ErrorBoundary extends Component<Props, State> {
     public componentDidCatch(error: Error, errorInfo: ErrorInfo) {
         console.error("Uncaught error:", error, errorInfo);
         this.setState({ error, errorInfo });
+
+        // Handle chunk load errors (common after new deployments)
+        const errorMessage = error.message || error.toString();
+        const isChunkError =
+            errorMessage.includes("Failed to fetch dynamically imported module") ||
+            errorMessage.includes("Loading chunk") ||
+            errorMessage.includes("error loading dynamically imported module");
+
+        if (isChunkError) {
+            console.log("Chunk load error detected. Attempting to reload page...");
+            // Check if we've already tried to reload to avoid infinite loops
+            const hasReloaded = sessionStorage.getItem('chunk_error_reload');
+            if (!hasReloaded) {
+                sessionStorage.setItem('chunk_error_reload', 'true');
+                window.location.reload();
+            }
+        }
     }
 
     public render() {
