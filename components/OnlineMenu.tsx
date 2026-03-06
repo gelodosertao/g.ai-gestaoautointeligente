@@ -1132,96 +1132,95 @@ const OnlineMenu: React.FC<OnlineMenuProps> = ({ onBack }) => {
                 </div>
             )}
 
-            {/* Header Section */}
-            <header className="relative z-20">
-                {/* Cover Image fallback to Orange if no cover configured */}
-                <div className={`w-full h-32 md:h-48 relative overflow-hidden ${settings?.coverImage ? '' : 'bg-gradient-to-r from-orange-400 to-orange-600'}`}>
-                    {settings?.coverImage && (
-                        <img src={settings.coverImage} className="w-full h-full object-cover" alt="Cover" />
-                    )}
-                    <div className="absolute inset-0 bg-black/10"></div>
-                </div>
-
-                <div className="px-5 pb-4 flex flex-col items-center text-center relative max-w-2xl mx-auto -mt-12">
-                    {/* Profile Picture (Logo) */}
-                    <div className="w-24 h-24 bg-white rounded-full shadow-2xl p-1 border-4 border-white z-30 overflow-hidden">
-                        <img
-                            src={settings?.logoImage || '/menu_perfil.jpg'}
-                            className="w-full h-full object-cover rounded-full"
-                            alt="Logo"
-                        />
+            {/* Mobile Optimized White Header */}
+            <header className="bg-white border-b border-slate-100 relative z-40">
+                <div className="max-w-2xl mx-auto px-5 pt-8 pb-5 flex flex-col items-center gap-4">
+                    {/* Centered Circular Profile */}
+                    <div className="relative">
+                        <div className="w-28 h-28 rounded-full overflow-hidden border-4 border-slate-50 shadow-xl bg-slate-50 flex items-center justify-center">
+                            <img
+                                src="/menu_perfil.jpg"
+                                className="w-full h-full object-cover"
+                                alt="Logo"
+                                onError={(e) => {
+                                    // Fallback if the new image fails to load
+                                    const target = e.target as HTMLImageElement;
+                                    target.src = settings?.logoImage || '';
+                                }}
+                            />
+                        </div>
+                        {/* Open/Closed Badge on Logo */}
+                        <div className={`absolute bottom-1 right-1 w-6 h-6 rounded-full border-4 border-white shadow-sm ${isOpen ? 'bg-green-500' : 'bg-red-500'}`}></div>
                     </div>
 
-                    <div className="mt-3 bg-white/90 backdrop-blur-md p-4 rounded-2xl shadow-sm border border-slate-100 w-full">
-                        <h1 className="font-black text-2xl tracking-tight leading-tight text-slate-900">
+                    <div className="flex flex-col items-center gap-1">
+                        <h1 className="font-black text-2xl tracking-tight text-slate-900">
                             {settings?.storeName || 'Gelo do Sertão'}
                         </h1>
 
-                        <div className="flex items-center gap-2 flex-wrap justify-center mt-2">
-                            {isOpen ? (
-                                <div className="flex items-center gap-1.5 text-[10px] font-black uppercase tracking-wider text-green-700 bg-green-500/10 px-3 py-1.5 rounded-full border border-green-500/20">
-                                    <span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse"></span>
-                                    Loja Aberta
-                                </div>
-                            ) : (
-                                <div className="flex items-center gap-1.5 text-[10px] font-black uppercase tracking-wider text-white bg-red-600 px-3 py-1.5 rounded-full shadow-lg">
-                                    <span className="w-1.5 h-1.5 rounded-full bg-white animate-pulse"></span>
-                                    Loja Fechada
-                                </div>
-                            )}
-                            {settings?.address && (
-                                <p className="text-[10px] font-bold flex items-center gap-1 text-slate-400 uppercase tracking-widest">
-                                    <MapPin size={9} /> {settings.address.split(',')[0]}
-                                </p>
-                            )}
-                        </div>
-
-                        <div className="mt-4 flex items-center gap-2 justify-center w-full">
-                            <button
-                                onClick={() => {
-                                    setStep('TRACKING');
-                                    loadMyOrders();
-                                }}
-                                style={{ color: settings?.primaryColor || '#0f172a', borderColor: `${settings?.primaryColor || '#0f172a'}30` }}
-                                className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl transition-all active:scale-95 font-black text-xs uppercase tracking-wider border bg-white shadow-sm"
-                            >
-                                <Package size={14} /> Meus Pedidos
-                            </button>
-
-                            <a
-                                href={`https://wa.me/${settings?.phone || '557799914444'}`}
-                                target="_blank"
-                                rel="noreferrer"
-                                className="w-12 h-10 flex items-center justify-center rounded-xl bg-green-500 text-white shadow-lg active:scale-95 transition-all"
-                            >
-                                <Phone size={18} />
-                            </a>
+                        <div className="flex items-center gap-1.5 text-[10px] font-black uppercase tracking-widest text-slate-400">
+                            <MapPin size={10} className="text-slate-300" />
+                            {settings?.address?.split(',')[0] || 'Barreiras, BA'}
                         </div>
                     </div>
 
-                    {/* Compact Categories Scroll */}
-                    <div className="sticky top-0 z-30 bg-white/90 backdrop-blur-md border-b border-slate-100">
-                        <div className="px-4 py-3 overflow-x-auto scrollbar-hide flex gap-2 items-center max-w-3xl mx-auto" ref={categoryScrollRef}>
-                            {categories.map(cat => {
-                                const isActive = selectedCategory === cat;
-                                return (
-                                    <button
-                                        key={cat}
-                                        onClick={() => {
-                                            setSelectedCategory(cat);
-                                            window.scrollTo({ top: 0, behavior: 'smooth' });
-                                        }}
-                                        style={isActive ? { backgroundColor: settings?.primaryColor || '#0f172a' } : {}}
-                                        className={`px-4 py-1.5 text-[11px] font-black uppercase tracking-wider whitespace-nowrap rounded-full transition-all duration-300 ${isActive
-                                            ? 'text-white shadow-lg scale-105'
-                                            : 'bg-slate-100 text-slate-500 border border-transparent hover:bg-slate-200'
-                                            }`}
-                                    >
-                                        {cat}
-                                    </button>
-                                );
-                            })}
-                        </div>
+                    <div className="flex items-center gap-2 w-full max-w-xs mt-1">
+                        {isOpen ? (
+                            <div className="flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-xl bg-green-50 text-green-700 border border-green-100">
+                                <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></span>
+                                <span className="text-[11px] font-black uppercase tracking-wider">Aberto Agora</span>
+                            </div>
+                        ) : (
+                            <div className="flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-xl bg-red-50 text-red-700 border border-red-100">
+                                <span className="w-2 h-2 rounded-full bg-red-500"></span>
+                                <span className="text-[11px] font-black uppercase tracking-wider">Fechado</span>
+                            </div>
+                        )}
+
+                        <button
+                            onClick={() => {
+                                setStep('TRACKING');
+                                loadMyOrders();
+                            }}
+                            className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl bg-slate-900 text-white shadow-lg shadow-slate-200 active:scale-95 transition-all"
+                        >
+                            <Package size={14} />
+                            <span className="text-[11px] font-black uppercase tracking-wider">Pedidos</span>
+                        </button>
+
+                        <a
+                            href={`https://wa.me/${settings?.phone || '557799914444'}`}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="w-12 h-11 flex items-center justify-center rounded-xl bg-green-500 text-white shadow-lg shadow-green-200 active:scale-95 transition-all"
+                        >
+                            <Phone size={20} />
+                        </a>
+                    </div>
+                </div>
+
+                {/* Sticky Categories */}
+                <div className="sticky top-0 bg-white/95 backdrop-blur-md border-y border-slate-50 shadow-sm overflow-x-auto scrollbar-hide py-3">
+                    <div className="px-5 flex gap-2 items-center max-w-3xl mx-auto" ref={categoryScrollRef}>
+                        {categories.map(cat => {
+                            const isActive = selectedCategory === cat;
+                            return (
+                                <button
+                                    key={cat}
+                                    onClick={() => {
+                                        setSelectedCategory(cat);
+                                        window.scrollTo({ top: 0, behavior: 'smooth' });
+                                    }}
+                                    style={isActive ? { backgroundColor: settings?.primaryColor || '#0f172a' } : {}}
+                                    className={`px-5 py-2 text-[11px] font-black uppercase tracking-widest whitespace-nowrap rounded-full transition-all duration-300 ${isActive
+                                        ? 'text-white shadow-lg scale-105'
+                                        : 'bg-slate-50 text-slate-400 border border-slate-100 hover:bg-slate-100'
+                                        }`}
+                                >
+                                    {cat}
+                                </button>
+                            );
+                        })}
                     </div>
                 </div>
             </header>
