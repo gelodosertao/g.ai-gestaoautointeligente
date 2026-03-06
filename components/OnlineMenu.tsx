@@ -302,20 +302,45 @@ const OnlineMenu: React.FC<OnlineMenuProps> = ({ onBack }) => {
     const isStoreOpen = () => {
         if (!settings || !settings.businessHours || settings.businessHours.length === 0) return true;
 
-        const now = new Date();
-        const dayOfWeek = now.getDay(); // 0 (Dom) a 6 (Sáb)
+        try {
+            // Get current time and weekday specifically in America/Bahia (UTC-3)
+            const formatter = new Intl.DateTimeFormat('en-US', {
+                timeZone: 'America/Bahia',
+                hour12: false,
+                hour: '2-digit',
+                minute: '2-digit',
+                weekday: 'long'
+            });
 
-        // Map JS getDay() to our businessHours array (starts with Segunda-feira)
-        // 0 (Dom) -> index 6
-        // 1 (Seg) -> index 0
-        // ...
-        const index = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
-        const dayConfig = settings.businessHours[index];
+            const parts = formatter.formatToParts(new Date());
+            const hour = parts.find(p => p.type === 'hour')?.value || '00';
+            const minute = parts.find(p => p.type === 'minute')?.value || '00';
+            const weekdayEN = parts.find(p => p.type === 'weekday')?.value || '';
 
-        if (!dayConfig || !dayConfig.isOpen) return false;
+            const currentTime = `${hour}:${minute}`;
 
-        const currentTime = now.getHours().toString().padStart(2, '0') + ':' + now.getMinutes().toString().padStart(2, '0');
-        return currentTime >= dayConfig.open && currentTime <= dayConfig.close;
+            // Map English weekday to Portuguese used in our settings
+            const dayMap: Record<string, string> = {
+                'Monday': 'Segunda-feira',
+                'Tuesday': 'Terça-feira',
+                'Wednesday': 'Quarta-feira',
+                'Thursday': 'Quinta-feira',
+                'Friday': 'Sexta-feira',
+                'Saturday': 'Sábado',
+                'Sunday': 'Domingo'
+            };
+
+            const currentDayName = dayMap[weekdayEN];
+            const dayConfig = settings.businessHours.find(h => h.day === currentDayName);
+
+            if (!dayConfig) return true; // Se não achar o dia, assume aberto para não travar vendas
+            if (!dayConfig.isOpen) return false;
+
+            return currentTime >= dayConfig.open && currentTime <= dayConfig.close;
+        } catch (error) {
+            console.error("Erro ao validar horário de funcionamento:", error);
+            return true; // Em caso de erro, deixa o cardápio aberto (mais seguro comercialmente)
+        }
     };
 
     const isOpen = isStoreOpen();
