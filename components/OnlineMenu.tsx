@@ -1135,36 +1135,35 @@ const OnlineMenu: React.FC<OnlineMenuProps> = ({ onBack }) => {
             {/* Mobile Optimized White Header */}
             <header className="bg-white border-b border-slate-100 relative z-40">
                 <div className="max-w-2xl mx-auto px-5 pt-8 pb-5 flex flex-col items-center gap-4">
-                    {/* Centered Circular Profile */}
+                    {/* Centered Circular Profile with better framing */}
                     <div className="relative">
-                        <div className="w-28 h-28 rounded-full overflow-hidden border-4 border-slate-50 shadow-xl bg-slate-50 flex items-center justify-center">
+                        <div className="w-32 h-32 rounded-full overflow-hidden border-4 border-white shadow-2xl bg-white flex items-center justify-center p-1.5">
                             <img
                                 src="/menu_perfil.jpg"
-                                className="w-full h-full object-cover"
+                                className="w-full h-full object-cover rounded-full"
                                 alt="Logo"
                                 onError={(e) => {
-                                    // Fallback if the new image fails to load
                                     const target = e.target as HTMLImageElement;
                                     target.src = settings?.logoImage || '';
                                 }}
                             />
                         </div>
-                        {/* Open/Closed Badge on Logo */}
-                        <div className={`absolute bottom-1 right-1 w-6 h-6 rounded-full border-4 border-white shadow-sm ${isOpen ? 'bg-green-500' : 'bg-red-500'}`}></div>
+                        {/* Open/Closed Indicator Badge */}
+                        <div className={`absolute bottom-2 right-2 w-7 h-7 rounded-full border-4 border-white shadow-md ${isOpen ? 'bg-green-500' : 'bg-red-500'}`}></div>
                     </div>
 
-                    <div className="flex flex-col items-center gap-1">
-                        <h1 className="font-black text-2xl tracking-tight text-slate-900">
+                    <div className="flex flex-col items-center gap-1.5 mb-2">
+                        <h1 className="font-extrabold text-2xl tracking-tight text-slate-900 drop-shadow-sm">
                             {settings?.storeName || 'Gelo do Sertão'}
                         </h1>
 
-                        <div className="flex items-center gap-1.5 text-[10px] font-black uppercase tracking-widest text-slate-400">
-                            <MapPin size={10} className="text-slate-300" />
+                        <div className="flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-widest text-slate-400">
+                            <MapPin size={11} className="text-orange-500/50" />
                             {settings?.address?.split(',')[0] || 'Barreiras, BA'}
                         </div>
                     </div>
 
-                    <div className="flex items-center gap-2 w-full max-w-xs mt-1">
+                    <div className="flex items-center gap-2 w-full max-w-xs mt-6">
                         {isOpen ? (
                             <div className="flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-xl bg-green-50 text-green-700 border border-green-100">
                                 <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></span>
