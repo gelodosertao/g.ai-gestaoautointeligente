@@ -1117,14 +1117,16 @@ const OnlineMenu: React.FC<OnlineMenuProps> = ({ onBack }) => {
 
                         {/* Footer */}
                         <div className="p-4 border-t border-slate-100 bg-white shadow-[0_-5px_20px_rgba(0,0,0,0.05)]">
-                            <div className="flex justify-between items-center mb-4 text-sm font-medium text-slate-500">
-                                <span>Quantidade</span>
-                                <div className="flex items-center gap-3 bg-slate-100 rounded-lg p-1">
-                                    <button onClick={() => setCustomizationQty(Math.max(1, customizationQty - 1))} className="w-8 h-8 flex items-center justify-center bg-white rounded shadow-sm text-slate-600"><Minus size={16} /></button>
-                                    <span className="w-6 text-center font-bold text-slate-900">{customizationQty}</span>
-                                    <button onClick={() => setCustomizationQty(customizationQty + 1)} className="w-8 h-8 flex items-center justify-center bg-slate-900 text-white rounded shadow-sm"><Plus size={16} /></button>
+                            {!customizationProduct.options?.some(opt => opt.type === 'checkbox' && ['GELO', 'CIGARRO', 'PALHEIRO'].some(kw => opt.name.toUpperCase().includes(kw) || customizationProduct.name.toUpperCase().includes(kw))) && (
+                                <div className="flex justify-between items-center mb-4 text-sm font-medium text-slate-500">
+                                    <span>Quantidade</span>
+                                    <div className="flex items-center gap-3 bg-slate-100 rounded-lg p-1">
+                                        <button onClick={() => setCustomizationQty(Math.max(1, customizationQty - 1))} className="w-8 h-8 flex items-center justify-center bg-white rounded shadow-sm text-slate-600"><Minus size={16} /></button>
+                                        <span className="w-6 text-center font-bold text-slate-900">{customizationQty}</span>
+                                        <button onClick={() => setCustomizationQty(customizationQty + 1)} className="w-8 h-8 flex items-center justify-center bg-slate-900 text-white rounded shadow-sm"><Plus size={16} /></button>
+                                    </div>
                                 </div>
-                            </div>
+                            )}
                             <button
                                 onClick={confirmCustomization}
                                 style={{ backgroundColor: settings?.primaryColor || '#0f172a' }}
