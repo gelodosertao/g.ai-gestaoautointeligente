@@ -424,7 +424,6 @@ const Reports: React.FC<ReportsProps> = ({ sales, products, customers, onBack })
                                 <thead className="bg-slate-100 text-slate-600 font-semibold uppercase text-xs">
                                     <tr>
                                         <th className="p-3">Data</th>
-                                        <th className="p-3">Horário</th>
                                         <th className="p-3">ID</th>
                                         <th className="p-3">Cliente</th>
                                         <th className="p-3">Filial</th>
@@ -437,9 +436,6 @@ const Reports: React.FC<ReportsProps> = ({ sales, products, customers, onBack })
                                     {salesList.map(sale => (
                                         <tr key={sale.id} className="hover:bg-slate-50 transition-colors">
                                             <td className="p-3 text-slate-600">{sale.date.split('-').reverse().join('/')}</td>
-                                            <td className="p-3 text-slate-600 font-bold">
-                                                {sale.createdAt ? new Date(sale.createdAt).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) : '-'}
-                                            </td>
                                             <td className="p-3 font-mono text-xs text-slate-400">{sale.id.slice(0, 8)}...</td>
                                             <td className="p-3 font-bold text-slate-700">{sale.customerName}</td>
                                             <td className="p-3 text-slate-600 text-xs">
