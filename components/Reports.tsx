@@ -63,7 +63,14 @@ const Reports: React.FC<ReportsProps> = ({ sales, products, customers, onBack })
             }
 
             return true;
-        }).sort((a, b) => b.date.localeCompare(a.date)); // Sort Descending
+        }).sort((a, b) => {
+            // Se ambos tiverem createdAt, ordena por horário real
+            if (a.createdAt && b.createdAt) {
+                return b.createdAt.localeCompare(a.createdAt);
+            }
+            // Fallback para data se createdAt estiver ausente
+            return b.date.localeCompare(a.date);
+        }); // Sort Descending (Newest first)
     }, [sales, dateRange, customStartDate, customEndDate, selectedBranch]);
 
     // --- ANALYTICS DATA ---
@@ -417,6 +424,7 @@ const Reports: React.FC<ReportsProps> = ({ sales, products, customers, onBack })
                                 <thead className="bg-slate-100 text-slate-600 font-semibold uppercase text-xs">
                                     <tr>
                                         <th className="p-3">Data</th>
+                                        <th className="p-3">Horário</th>
                                         <th className="p-3">ID</th>
                                         <th className="p-3">Cliente</th>
                                         <th className="p-3">Filial</th>
@@ -429,6 +437,9 @@ const Reports: React.FC<ReportsProps> = ({ sales, products, customers, onBack })
                                     {salesList.map(sale => (
                                         <tr key={sale.id} className="hover:bg-slate-50 transition-colors">
                                             <td className="p-3 text-slate-600">{sale.date.split('-').reverse().join('/')}</td>
+                                            <td className="p-3 text-slate-600 font-bold">
+                                                {sale.createdAt ? new Date(sale.createdAt).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) : '-'}
+                                            </td>
                                             <td className="p-3 font-mono text-xs text-slate-400">{sale.id.slice(0, 8)}...</td>
                                             <td className="p-3 font-bold text-slate-700">{sale.customerName}</td>
                                             <td className="p-3 text-slate-600 text-xs">

@@ -1,8 +1,8 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useMemo } from 'react';
 import { invoiceService } from '../services/invoiceService';
 import { Sale, Branch, Product, Customer, User, PaymentEntry } from '../types';
 import { hardwareBridge } from '../services/hardwareBridge';
-import { ShoppingCart, FileText, CheckCircle, Clock, X, Printer, Send, ScanBarcode, Search, Trash2, Plus, Minus, CreditCard, Banknote, QrCode, Bluetooth, ArrowRight, Store, Factory, Calculator, User as UserIcon, UserPlus, Edit, Save, ArrowLeft, Download, Camera } from 'lucide-react';
+import { ShoppingCart, FileText, CheckCircle, Clock, X, Printer, Send, ScanBarcode, Search, Trash2, Plus, Minus, CreditCard, Banknote, QrCode, Bluetooth, ArrowRight, Store, Factory, Calculator, User as UserIcon, UserPlus, Edit, Save, ArrowLeft, Download, Camera, ShoppingBag, Globe, FileCheck, FilePenLine } from 'lucide-react';
 import html2canvas from 'html2canvas';
 import { jsPDF } from 'jspdf';
 import { BrowserMultiFormatReader } from '@zxing/library';
@@ -163,6 +163,40 @@ const Sales: React.FC<SalesProps> = ({ sales, products, customers, onAddSale, on
    // --- HISTORY SEARCH STATE ---
    const [historySearchTerm, setHistorySearchTerm] = useState('');
    const [statusFilter, setStatusFilter] = useState<'ALL' | 'Completed' | 'Pending' | 'Cancelled'>('ALL');
+
+   const groupedSales = useMemo(() => {
+      const filtered = sales.filter(sale => {
+         const matchesSearch = (sale.customerName?.toLowerCase() || "").includes(historySearchTerm.toLowerCase()) ||
+            sale.id.includes(historySearchTerm) ||
+            sale.total.toString().includes(historySearchTerm);
+
+         const matchesStatus = statusFilter === 'ALL' || sale.status === statusFilter;
+
+         return matchesSearch && matchesStatus;
+      });
+
+      const groups: Record<string, Sale[]> = {};
+      const today = getTodayDate();
+      const yesterdayDate = new Date();
+      yesterdayDate.setDate(yesterdayDate.getDate() - 1);
+      const yesterday = yesterdayDate.toLocaleDateString('sv-SE', { timeZone: 'America/Bahia' });
+
+      filtered.forEach(sale => {
+         let groupKey = sale.date;
+         if (sale.date === today) groupKey = 'Hoje';
+         else if (sale.date === yesterday) groupKey = 'Ontem';
+         else {
+            // Format YYYY-MM-DD to DD/MM/YYYY
+            const parts = sale.date.split('-');
+            if (parts.length === 3) groupKey = `${parts[2]}/${parts[1]}/${parts[0]}`;
+         }
+
+         if (!groups[groupKey]) groups[groupKey] = [];
+         groups[groupKey].push(sale);
+      });
+
+      return groups;
+   }, [sales, historySearchTerm, statusFilter]);
 
    // --- MOBILE RESPONSIVE STATE ---
    const [showMobileCart, setShowMobileCart] = useState(false);
@@ -706,99 +740,136 @@ const Sales: React.FC<SalesProps> = ({ sales, products, customers, onAddSale, on
                   </select>
                </div>
 
-               {sales.filter(sale => {
-                  const matchesSearch = sale.customerName.toLowerCase().includes(historySearchTerm.toLowerCase()) ||
-                     sale.id.includes(historySearchTerm) ||
-                     sale.total.toString().includes(historySearchTerm);
-
-                  const matchesStatus = statusFilter === 'ALL' || sale.status === statusFilter;
-
-                  return matchesSearch && matchesStatus;
-               }).map(sale => (
-                  <div key={sale.id} className="bg-white p-4 md:p-5 rounded-2xl shadow-sm border border-slate-200 flex flex-col md:flex-row justify-between items-start hover:border-blue-200 transition-all gap-4">
-                     <div className="flex gap-3 md:gap-4 items-start w-full md:w-auto">
-                        <div className={`p-3 rounded-xl shrink-0 ${sale.branch === Branch.MATRIZ ? 'bg-blue-100 text-blue-600' : 'bg-orange-100 text-orange-600'} `}>
-                           {sale.branch === Branch.MATRIZ ? <Factory size={22} /> : <Store size={22} />}
-                        </div>
-                        <div className="flex-1 min-w-0">
-                           <h4 className="font-bold text-slate-800 text-base md:text-lg mb-0.5 truncate">{sale.customerName}</h4>
-                           <p className="text-xs md:text-sm text-slate-500 flex flex-wrap items-center gap-1.5">
-                              <span>{sale.date}</span>
-                              {sale.createdAt && <span className="hidden sm:inline">- {new Date(sale.createdAt).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}</span>}
-                              <span className="hidden sm:inline">•</span>
-                              <span className={`font-bold px-2 py-0.5 rounded-md text-[10px] sm:text-xs ${sale.branch === Branch.MATRIZ ? 'bg-blue-50 text-blue-700' : 'bg-orange-50 text-orange-700'}`}>{sale.branch}</span>
-                           </p>
-                           <div className="text-xs text-slate-400 mt-2 line-clamp-2 md:line-clamp-none leading-relaxed">
-                              {sale.items.map(i => `${i.quantity}x ${i.productName} `).join(', ')}
-                           </div>
-                        </div>
-                     </div>
-
-                     <div className="mt-2 md:mt-0 flex flex-col items-start md:items-end w-full md:w-auto pt-3 md:pt-0 border-t border-slate-100 md:border-0 border-dashed">
-                        <div className="flex justify-between md:justify-end items-center w-full mb-3 md:mb-1">
-                           <span className="font-black text-xl md:text-lg text-slate-800">{formatCurrency(sale.total)}</span>
-                           {sale.status === 'Pending' && (
-                              <span className="text-xs font-bold text-red-600 ml-3 bg-red-50 px-2 py-1 rounded-lg border border-red-100">
-                                 Deve: {formatCurrency(sale.total - (sale.amountPaid || 0))}
-                              </span>
-                           )}
-                        </div>
-                        <div className="flex gap-1.5 flex-wrap justify-start md:justify-end">
-                           <span className={`px-2 py-1 rounded-md text-[10px] md:text-xs font-bold border flex items-center gap-1 ${sale.status === 'Completed' ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : sale.status === 'Pending' ? 'bg-amber-50 text-amber-700 border-amber-200' : 'bg-red-50 text-red-700 border-red-200'} `}>
-                              {sale.status === 'Completed' ? 'Concluído' : sale.status === 'Pending' ? 'Pendente' : 'Cancelado'}
-                           </span>
-                           <span className={`px-2 py-1 rounded-md text-[10px] md:text-xs font-bold border flex items-center gap-1 ${sale.hasInvoice ? 'bg-green-50 text-green-700 border-green-200' : 'bg-orange-50 text-orange-700 border-orange-200'} `}>
-                              {sale.hasInvoice ? <CheckCircle size={10} /> : <Clock size={10} />}
-                              {sale.hasInvoice ? 'NF-e Emitida' : 'Sem NF-e'}
-                           </span>
-                           <span className="px-2 py-1 rounded-md text-[10px] md:text-xs font-bold bg-slate-50 text-slate-600 border border-slate-200">
-                              {sale.paymentMethod}
-                           </span>
-                        </div>
-                        <div className="flex flex-wrap gap-2 mt-3 md:justify-end w-full">
-                           {sale.status === 'Pending' && (
-                              <button
-                                 onClick={() => openDebtPaymentModal(sale)}
-                                 className="flex-1 md:flex-none justify-center text-xs font-bold text-orange-700 flex items-center gap-1.5 cursor-pointer bg-orange-50 px-3 py-2 rounded-lg hover:bg-orange-100 transition-colors border border-orange-200 shadow-sm"
-                              >
-                                 <Banknote size={14} /> Receber
-                              </button>
-                           )}
-                           {!sale.hasInvoice ? (
-                              <button
-                                 onClick={() => handleOpenInvoice(sale)}
-                                 className="flex-1 md:flex-none justify-center text-xs text-blue-700 font-bold flex items-center gap-1.5 cursor-pointer bg-blue-50 px-3 py-2 rounded-lg hover:bg-blue-100 transition-colors shadow-sm"
-                              >
-                                 <FileText size={14} /> Emitir NF
-                              </button>
-                           ) : (
-                              <button
-                                 onClick={() => setSaleToDownload(sale)}
-                                 className="flex-1 md:flex-none justify-center text-xs text-slate-500 font-bold flex items-center gap-1.5 cursor-pointer bg-slate-100 px-3 py-2 rounded-lg hover:bg-slate-200 transition-colors"
-                              >
-                                 <Download size={14} /> DANFE
-                              </button>
-                           )}
-                           {currentUser.role === 'ADMIN' && (
-                              <div className="flex gap-2 flex-1 md:flex-none min-w-full md:min-w-0 mt-1 md:mt-0">
-                                 <button
-                                    onClick={() => openEditSaleModal(sale)}
-                                    className="flex-1 md:flex-none justify-center text-xs text-slate-600 font-bold flex items-center gap-1.5 cursor-pointer bg-slate-50 border border-slate-200 px-3 py-2 rounded-lg hover:bg-slate-100 hover:text-blue-600 transition-colors"
-                                 >
-                                    <Edit size={14} /> Editar
-                                 </button>
-                                 <button
-                                    onClick={() => onDeleteSale(sale.id)}
-                                    className="flex-1 md:flex-none justify-center text-xs text-slate-600 font-bold flex items-center gap-1.5 cursor-pointer bg-slate-50 border border-slate-200 px-3 py-2 rounded-lg hover:bg-red-50 hover:text-red-600 hover:border-red-200 transition-colors"
-                                 >
-                                    <Trash2 size={14} /> Excluir
-                                 </button>
-                              </div>
-                           )}
-                        </div>
-                     </div>
+               {Object.entries(groupedSales).length === 0 ? (
+                  <div className="flex flex-col items-center justify-center p-12 bg-white rounded-2xl border border-dashed border-slate-300 text-slate-400 mt-4">
+                     <ShoppingBag size={48} strokeWidth={1} className="mb-4 opacity-20" />
+                     <p className="font-medium">Nenhuma venda encontrada para os filtros aplicados.</p>
                   </div>
-               ))}
+               ) : (
+                  Object.entries(groupedSales).map(([dateGroup, groupSales]) => (
+                     <div key={dateGroup} className="space-y-3">
+                        <div className="flex items-center gap-2 px-2 mt-6 mb-2 first:mt-0">
+                           <div className="h-[1px] flex-1 bg-slate-200"></div>
+                           <span className="text-[10px] sm:text-xs font-black uppercase tracking-[0.2em] text-slate-500 bg-white px-4 py-1.5 rounded-full border border-slate-200 shadow-sm shadow-slate-100/50">
+                              {dateGroup}
+                           </span>
+                           <div className="h-[1px] flex-1 bg-slate-200"></div>
+                        </div>
+
+                        <div className="grid gap-3">
+                           {groupSales.map(sale => (
+                              <div key={sale.id} className="bg-white p-4 md:p-5 rounded-2xl shadow-sm border border-slate-200 flex flex-col md:flex-row justify-between items-start hover:border-blue-300 hover:shadow-md transition-all gap-4 relative overflow-hidden group/card">
+                                 {/* Branch Indicator Line */}
+                                 <div className={`absolute left-0 top-0 bottom-0 w-1 ${sale.branch === Branch.MATRIZ ? 'bg-blue-600' : 'bg-orange-500'}`} />
+
+                                 <div className="flex gap-3 md:gap-4 items-start w-full md:w-auto">
+                                    <div className={`p-3 rounded-xl shrink-0 ${sale.branch === Branch.MATRIZ ? 'bg-blue-50 text-blue-600 border border-blue-100' : 'bg-orange-50 text-orange-600 border border-orange-100'} `}>
+                                       {sale.branch === Branch.MATRIZ ? <Factory size={22} /> : <Store size={22} />}
+                                    </div>
+                                    <div className="flex-1 min-w-0">
+                                       <div className="flex items-center gap-2 mb-0.5">
+                                          <h4 className="font-bold text-slate-800 text-base md:text-lg truncate">{sale.customerName}</h4>
+                                          <span className="text-[10px] font-bold text-slate-400 bg-slate-100 px-1.5 py-0.5 rounded uppercase tracking-tighter">#{sale.id.slice(-4)}</span>
+                                       </div>
+                                       <p className="text-xs md:text-sm text-slate-500 flex flex-wrap items-center gap-2">
+                                          <span className="flex items-center gap-1 font-black text-slate-700 bg-slate-100 px-2 py-0.5 rounded-lg border border-slate-200">
+                                             <Clock size={12} className="text-slate-400" />
+                                             {sale.createdAt ? new Date(sale.createdAt).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) : "-"}
+                                          </span>
+                                          <span className={`font-bold px-2 py-0.5 rounded-lg text-[10px] sm:text-xs border ${sale.branch === Branch.MATRIZ ? 'bg-blue-50/50 text-blue-600 border-blue-100' : 'bg-orange-50/50 text-orange-600 border-orange-100'}`}>
+                                             {sale.branch}
+                                          </span>
+                                          {sale.source === 'OnlineMenu' && (
+                                             <span className="bg-emerald-50 text-emerald-600 border border-emerald-100 px-2 py-0.5 rounded-lg text-[10px] font-bold flex items-center gap-1">
+                                                <Globe size={10} /> Online
+                                             </span>
+                                          )}
+                                       </p>
+                                       <div className="text-xs text-slate-400 mt-2.5 line-clamp-2 md:line-clamp-none leading-relaxed flex flex-wrap gap-x-2 gap-y-1">
+                                          {sale.items.map((i, idx) => (
+                                             <span key={idx} className="bg-slate-50 px-2 py-0.5 rounded border border-slate-100 text-slate-500 whitespace-nowrap">
+                                                <strong className="text-slate-700">{i.quantity}x</strong> {i.productName}
+                                             </span>
+                                          ))}
+                                       </div>
+                                    </div>
+                                 </div>
+
+                                 <div className="mt-2 md:mt-0 flex flex-col items-start md:items-end w-full md:w-auto pt-3 md:pt-0 border-t border-slate-100 md:border-0 border-dashed">
+                                    <div className="flex justify-between md:justify-end items-center w-full mb-3 md:mb-1">
+                                       <div className="flex flex-col items-start md:items-end">
+                                          <span className="text-[10px] font-black uppercase tracking-widest text-slate-400 leading-none mb-1">Valor Total</span>
+                                          <span className="font-black text-2xl md:text-xl text-slate-900 tracking-tight">{formatCurrency(sale.total)}</span>
+                                       </div>
+                                       {sale.status === 'Pending' && (
+                                          <div className="flex flex-col items-end ml-4">
+                                             <span className="text-[10px] font-black uppercase tracking-widest text-red-400 leading-none mb-1">Restante</span>
+                                             <span className="text-sm font-bold text-red-600 bg-red-50 px-2 py-1 rounded-lg border border-red-200">
+                                                {formatCurrency(sale.total - (sale.amountPaid || 0))}
+                                             </span>
+                                          </div>
+                                       )}
+                                    </div>
+                                    <div className="flex gap-1.5 flex-wrap justify-start md:justify-end mt-2">
+                                       <span className={`px-2 py-1 rounded-lg text-[10px] md:text-xs font-black border flex items-center gap-1 uppercase tracking-wider ${sale.status === 'Completed' ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : sale.status === 'Pending' ? 'bg-amber-50 text-amber-700 border-amber-200' : 'bg-red-50 text-red-700 border-red-200'} `}>
+                                          {sale.status === 'Completed' ? 'Concluído' : sale.status === 'Pending' ? 'Pendente' : 'Cancelado'}
+                                       </span>
+                                       <span className={`px-2 py-1 rounded-lg text-[10px] md:text-xs font-bold border flex items-center gap-1 ${sale.hasInvoice ? 'bg-green-50 text-green-700 border-green-200' : 'bg-slate-50 text-slate-500 border-slate-200'} `}>
+                                          {sale.hasInvoice ? <FileCheck size={12} /> : <FilePenLine size={12} />}
+                                          {sale.hasInvoice ? 'NF-e Emitida' : 'Sem Nota'}
+                                       </span>
+                                       <span className="px-2 py-1 rounded-lg text-[10px] md:text-xs font-bold bg-slate-900 text-white shadow-sm flex items-center gap-1">
+                                          <CreditCard size={12} /> {sale.paymentMethod === 'Cash' ? 'Dinheiro' : sale.paymentMethod === 'Credit' ? 'Crédito' : sale.paymentMethod === 'Debit' ? 'Débito' : sale.paymentMethod}
+                                       </span>
+                                    </div>
+                                    <div className="flex flex-wrap gap-2 mt-4 md:justify-end w-full">
+                                       {sale.status === 'Pending' && (
+                                          <button
+                                             onClick={() => openDebtPaymentModal(sale)}
+                                             className="flex-1 md:flex-none justify-center text-xs font-black uppercase tracking-wider text-white bg-orange-600 px-4 py-2.5 rounded-xl hover:bg-orange-700 hover:shadow-lg transition-all border border-orange-500 shadow-sm flex items-center gap-2"
+                                          >
+                                             <Banknote size={16} /> Receber
+                                          </button>
+                                       )}
+                                       {!sale.hasInvoice ? (
+                                          <button
+                                             onClick={() => handleOpenInvoice(sale)}
+                                             className="flex-1 md:flex-none justify-center text-xs text-blue-700 font-black uppercase tracking-wider flex items-center gap-2 cursor-pointer bg-blue-50 px-4 py-2.5 rounded-xl hover:bg-blue-100 transition-all border border-blue-100 shadow-sm"
+                                          >
+                                             <FileText size={16} /> Emitir NF
+                                          </button>
+                                       ) : (
+                                          <button
+                                             onClick={() => setSaleToDownload(sale)}
+                                             className="flex-1 md:flex-none justify-center text-xs text-slate-600 font-black uppercase tracking-wider flex items-center gap-2 cursor-pointer bg-slate-100 px-4 py-2.5 rounded-xl hover:bg-slate-200 transition-all border border-slate-200"
+                                          >
+                                             <Download size={16} /> Recibo/DANFE
+                                          </button>
+                                       )}
+                                       {currentUser.role === 'ADMIN' && (
+                                          <div className="flex gap-2 flex-1 md:flex-none min-w-full md:min-w-0">
+                                             <button
+                                                onClick={() => openEditSaleModal(sale)}
+                                                className="flex-1 md:flex-none justify-center text-xs text-slate-600 font-bold flex items-center gap-2 cursor-pointer bg-white border border-slate-200 px-3 py-2 rounded-xl hover:bg-slate-50 hover:text-blue-600 transition-all"
+                                             >
+                                                <Edit size={14} /> Editar
+                                             </button>
+                                             <button
+                                                onClick={() => onDeleteSale(sale.id)}
+                                                className="flex-1 md:flex-none justify-center text-xs text-slate-600 font-bold flex items-center gap-2 cursor-pointer bg-white border border-slate-200 px-3 py-2 rounded-xl hover:bg-red-50 hover:text-red-600 hover:border-red-200 transition-all"
+                                             >
+                                                <Trash2 size={14} /> Excluir
+                                             </button>
+                                          </div>
+                                       )}
+                                    </div>
+                                 </div>
+                              </div>
+                           ))}
+                        </div>
+                     </div>
+                  ))
+               )}
             </div>
          ) : (
             // --- POS (POINT OF SALE) VIEW ---

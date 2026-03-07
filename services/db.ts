@@ -374,7 +374,7 @@ export const dbSettings = {
 // --- SALES ---
 export const dbSales = {
   async getAll(tenantId: string): Promise<Sale[]> {
-    const { data, error } = await supabase.from('sales').select('*').eq('tenant_id', tenantId).order('date', { ascending: false });
+    const { data, error } = await supabase.from('sales').select('*').eq('tenant_id', tenantId).order('created_at', { ascending: false });
     if (error) throw error;
 
     return (data || []).map((row: any) => ({
