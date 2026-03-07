@@ -726,19 +726,19 @@ const OnlineMenu: React.FC<OnlineMenuProps> = ({ onBack }) => {
             setCart([]);
 
             // WhatsApp formatting
-            const itemsList = cart.map(i => {
-                const notes = i.notes ? `\n   📝 Obs: ${i.notes}` : '';
-                const opts = i.selectedOptions.length > 0 ? `\n   + ${i.selectedOptions.map(o => `${o.choiceName}`).join(', ')}` : '';
-                return `• ${i.quantity}x ${i.product.name}${opts}${notes}`;
-            }).join('%0A');
+            const itemsList = cart.map(item => {
+                const notes = item.notes ? `\n   📝 Obs: ${item.notes}` : '';
+                const opts = item.selectedOptions.length > 0 ? `\n   + ${item.selectedOptions.map(o => o.choiceName).join(', ')}` : '';
+                return `• ${item.quantity}x ${item.product.name}${opts}${notes}`;
+            }).join('\n');
 
             const methodText = deliveryMethod === 'DELIVERY' ? `Entrega 🛵` : 'Retirada 🏪';
-            const addressText = deliveryMethod === 'DELIVERY' ? `%0A📍 *Endereço:* ${fullAddress}` : '';
+            const addressText = deliveryMethod === 'DELIVERY' ? `\n📍 *Endereço:* ${fullAddress}` : '';
 
             let paymentText = paymentMethod === 'PIX' ? 'Pix' : paymentMethod === 'CARD' ? 'Cartão' : 'Dinheiro';
             if (paymentMethod === 'CASH' && changeFor) paymentText += ` (Troco para R$ ${changeFor})`;
 
-            const message = `👋 Olá! Gostaria de fazer um pedido:%0A%0A*👤 Cliente:* ${customerName}%0A*📱 Tel:* ${customerPhone}%0A%0A*🛒 Itens:*%0A${itemsList}%0A%0A*📦 Entrega:* ${methodText} ${deliveryMethod === 'DELIVERY' && deliveryFee > 0 ? `(R$ ${deliveryFee.toFixed(2)})` : ''}${addressText}%0A%0A*💰 Total Geral:* ${formatCurrency(cartTotal + (deliveryMethod === 'DELIVERY' ? deliveryFee : 0))}%0A*💳 Pagamento:* ${paymentText}`;
+            const message = `👋 Olá! Gostaria de fazer um pedido:\n\n*👤 Cliente:* ${customerName}\n*📱 Tel:* ${customerPhone}\n\n*🛒 Itens:*\n${itemsList}\n\n*📦 Entrega:* ${methodText} ${deliveryMethod === 'DELIVERY' && deliveryFee > 0 ? `(R$ ${deliveryFee.toFixed(2)})` : ''}${addressText}\n\n*💰 Total Geral:* ${formatCurrency(cartTotal + (deliveryMethod === 'DELIVERY' ? deliveryFee : 0))}\n*💳 Pagamento:* ${paymentText}`;
 
             const phone = settings?.phone || "5577998129383";
 
@@ -768,7 +768,7 @@ const OnlineMenu: React.FC<OnlineMenuProps> = ({ onBack }) => {
                 }
             } catch (e) { console.error("Tracking Error", e); }
 
-            window.open(`https://wa.me/${phone}?text=${message}`, '_blank');
+            window.open(`https://wa.me/${phone}?text=${encodeURIComponent(message)}`, '_blank');
 
         } catch (error) {
             console.error("Erro ao enviar:", error);

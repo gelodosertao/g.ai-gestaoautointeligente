@@ -222,18 +222,18 @@ const OrderCenter: React.FC<OrderCenterProps> = ({ onBack, tenantId }) => {
                 if (newStatus === 'READY') {
                     const isDelivery = order.deliveryMethod === 'DELIVERY';
                     if (isDelivery) {
-                        message = `Olá *${order.customerName}*!%0A%0ASeu pedido *saiu para entrega*! 🛵💨%0AEm breve chegaremos no endereço: _${order.address || 'Seu endereço'}_`;
+                        message = `Olá *${order.customerName}*!\n\nSeu pedido *saiu para entrega*! 🛵💨\nEm breve chegaremos no endereço: _${order.address || 'Seu endereço'}_`;
                     } else {
-                        message = `Olá *${order.customerName}*!%0A%0ASeu pedido está *pronto para retirada*! 🛍️✅%0APode vir buscar no balcão.`;
+                        message = `Olá *${order.customerName}*!\n\nSeu pedido está *pronto para retirada*! 🛍️✅\nPode vir buscar no balcão.`;
                     }
                 } else if (newStatus === 'DELIVERED') {
-                    message = `Olá *${order.customerName}*!%0A%0ASeu pedido foi *entregue/concluído*. ✅%0A%0AObrigado pela preferência! Volte sempre. ❄️`;
+                    message = `Olá *${order.customerName}*!\n\nSeu pedido foi *entregue/concluído*. ✅\n\nObrigado pela preferência! Volte sempre. ❄️`;
                 } else if (newStatus === 'PREPARING') {
-                    message = `Olá *${order.customerName}*!%0A%0ASeu pedido foi *aceito* e já está sendo preparado! 👩‍🍳👨‍🍳%0A%0AAvisaremos quando sair para entrega/retirada.`;
+                    message = `Olá *${order.customerName}*!\n\nSeu pedido foi *aceito* e já está sendo preparado! 👨‍🍳🍳\n\nAvisaremos quando sair para entrega/retirada.`;
                 }
 
                 if (message) {
-                    window.open(`https://wa.me/${validPhone}?text=${message}`, '_blank');
+                    window.open(`https://wa.me/${validPhone}?text=${encodeURIComponent(message)}`, '_blank');
                 }
             }
 
