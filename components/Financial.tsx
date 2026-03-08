@@ -22,7 +22,7 @@ interface FinancialProps {
 const Financial: React.FC<FinancialProps> = ({ records, sales, products, cashClosings, onAddRecord, onUpdateRecord, onDeleteRecord, onAddCashClosing, onDeleteCashClosing, currentUser, onBack }) => {
 
    const [showAddModal, setShowAddModal] = useState(false);
-   const [viewMode, setViewMode] = useState<'MOVEMENTS' | 'DRE' | 'CASH_CLOSING'>('DRE');
+   const [viewMode, setViewMode] = useState<'MOVEMENTS' | 'DRE' | 'CASH_CLOSING'>(currentUser?.role === 'ADMIN' ? 'DRE' : 'CASH_CLOSING');
    const [selectedBranch, setSelectedBranch] = useState<'ALL' | Branch>('ALL');
    const [dateRange, setDateRange] = useState<'TODAY' | 'THIS_WEEK' | 'THIS_MONTH' | 'LAST_30_DAYS' | 'LAST_60_DAYS' | 'LAST_90_DAYS' | 'ALL_TIME' | 'CUSTOM'>('THIS_MONTH');
    const [customStartDate, setCustomStartDate] = useState(getTodayDate());
@@ -562,95 +562,99 @@ const Financial: React.FC<FinancialProps> = ({ records, sales, products, cashClo
                   <ArrowLeft size={24} className="text-slate-600" />
                </button>
                <div>
-                  <h2 className="text-xl md:text-2xl font-bold text-slate-800">Gestão Financeira</h2>
-                  <p className="text-xs md:text-sm text-slate-500">Fluxo de caixa, DRE e controle de despesas.</p>
+                  <h2 className="text-xl md:text-2xl font-bold text-slate-800">{currentUser?.role === 'ADMIN' ? 'Gestão Financeira' : 'Fechamento de Caixa'}</h2>
+                  <p className="text-xs md:text-sm text-slate-500">{currentUser?.role === 'ADMIN' ? 'Fluxo de caixa, DRE e controle de despesas.' : 'Conferência de valores e encerramento de turno.'}</p>
                </div>
             </div>
 
-            <div className="flex flex-wrap items-center gap-2 w-full lg:w-auto">
-               {/* Branch Selector */}
-               <div className="bg-white p-1 rounded-lg border border-slate-200 flex shrink-0">
-                  <button onClick={() => setSelectedBranch('ALL')} className={`px-3 py-1.5 rounded-md text-xs font-bold transition-all ${selectedBranch === 'ALL' ? 'bg-slate-800 text-white' : 'text-slate-500 hover:bg-slate-50'}`}>Geral</button>
-                  <button onClick={() => setSelectedBranch(Branch.MATRIZ)} className={`px-3 py-1.5 rounded-md text-xs font-bold transition-all ${selectedBranch === Branch.MATRIZ ? 'bg-blue-600 text-white' : 'text-slate-500 hover:bg-slate-50'}`}>Matriz</button>
-                  <button onClick={() => setSelectedBranch(Branch.FILIAL)} className={`px-3 py-1.5 rounded-md text-xs font-bold transition-all ${selectedBranch === Branch.FILIAL ? 'bg-orange-500 text-white' : 'text-slate-500 hover:bg-slate-50'}`}>Filial</button>
+            {currentUser?.role === 'ADMIN' && (
+               <div className="flex flex-wrap items-center gap-2 w-full lg:w-auto">
+                  {/* Branch Selector */}
+                  <div className="bg-white p-1 rounded-lg border border-slate-200 flex shrink-0">
+                     <button onClick={() => setSelectedBranch('ALL')} className={`px-3 py-1.5 rounded-md text-xs font-bold transition-all ${selectedBranch === 'ALL' ? 'bg-slate-800 text-white' : 'text-slate-500 hover:bg-slate-50'}`}>Geral</button>
+                     <button onClick={() => setSelectedBranch(Branch.MATRIZ)} className={`px-3 py-1.5 rounded-md text-xs font-bold transition-all ${selectedBranch === Branch.MATRIZ ? 'bg-blue-600 text-white' : 'text-slate-500 hover:bg-slate-50'}`}>Matriz</button>
+                     <button onClick={() => setSelectedBranch(Branch.FILIAL)} className={`px-3 py-1.5 rounded-md text-xs font-bold transition-all ${selectedBranch === Branch.FILIAL ? 'bg-orange-500 text-white' : 'text-slate-500 hover:bg-slate-50'}`}>Filial</button>
+                  </div>
+
+                  <div className="flex gap-2 shrink-0">
+                     <button
+                        onClick={() => setShowAddModal(true)}
+                        className="bg-blue-800 hover:bg-blue-700 text-white px-3 py-2 rounded-lg font-bold flex items-center gap-2 shadow-lg shadow-blue-900/10 transition-colors text-xs md:text-sm whitespace-nowrap"
+                     >
+                        <Plus size={16} /> <span className="hidden sm:inline">Lançar</span> Despesa
+                     </button>
+
+                     <button
+                        onClick={() => setShowCategoryModal(true)}
+                        className="bg-slate-700 hover:bg-slate-600 text-white px-3 py-2 rounded-lg font-bold flex items-center gap-2 shadow-lg shadow-slate-900/10 transition-colors text-xs md:text-sm whitespace-nowrap"
+                     >
+                        <Filter size={16} /> <span className="hidden sm:inline">Categorias</span>
+                     </button>
+                  </div>
+
+                  <div className="bg-white p-1 rounded-lg border border-slate-200 flex shrink-0 items-center gap-2">
+                     <select
+                        value={dateRange}
+                        onChange={(e) => setDateRange(e.target.value as any)}
+                        className="px-3 py-1.5 rounded-md text-xs font-bold text-slate-600 bg-transparent outline-none cursor-pointer hover:bg-slate-50"
+                     >
+                        <option value="TODAY">Hoje</option>
+                        <option value="THIS_WEEK">Esta Semana</option>
+                        <option value="THIS_MONTH">Este Mês</option>
+                        <option value="LAST_30_DAYS">Últimos 30 Dias</option>
+                        <option value="LAST_60_DAYS">Últimos 60 Dias</option>
+                        <option value="LAST_90_DAYS">Últimos 90 Dias</option>
+                        <option value="ALL_TIME">Todo o Período</option>
+                        <option value="CUSTOM">Personalizado</option>
+                     </select>
+
+                     {dateRange === 'CUSTOM' && (
+                        <div className="flex items-center gap-1 pr-2 animate-in fade-in slide-in-from-right-2">
+                           <input
+                              type="date"
+                              value={customStartDate}
+                              onChange={(e) => setCustomStartDate(e.target.value)}
+                              className="w-24 px-2 py-1 border border-slate-200 rounded text-xs"
+                           />
+                           <span className="text-slate-400">-</span>
+                           <input
+                              type="date"
+                              value={customEndDate}
+                              onChange={(e) => setCustomEndDate(e.target.value)}
+                              className="w-24 px-2 py-1 border border-slate-200 rounded text-xs"
+                           />
+                        </div>
+                     )}
+                  </div>
                </div>
-
-               <div className="flex gap-2 shrink-0">
-                  <button
-                     onClick={() => setShowAddModal(true)}
-                     className="bg-blue-800 hover:bg-blue-700 text-white px-3 py-2 rounded-lg font-bold flex items-center gap-2 shadow-lg shadow-blue-900/10 transition-colors text-xs md:text-sm whitespace-nowrap"
-                  >
-                     <Plus size={16} /> <span className="hidden sm:inline">Lançar</span> Despesa
-                  </button>
-
-                  <button
-                     onClick={() => setShowCategoryModal(true)}
-                     className="bg-slate-700 hover:bg-slate-600 text-white px-3 py-2 rounded-lg font-bold flex items-center gap-2 shadow-lg shadow-slate-900/10 transition-colors text-xs md:text-sm whitespace-nowrap"
-                  >
-                     <Filter size={16} /> <span className="hidden sm:inline">Categorias</span>
-                  </button>
-               </div>
-
-               <div className="bg-white p-1 rounded-lg border border-slate-200 flex shrink-0 items-center gap-2">
-                  <select
-                     value={dateRange}
-                     onChange={(e) => setDateRange(e.target.value as any)}
-                     className="px-3 py-1.5 rounded-md text-xs font-bold text-slate-600 bg-transparent outline-none cursor-pointer hover:bg-slate-50"
-                  >
-                     <option value="TODAY">Hoje</option>
-                     <option value="THIS_WEEK">Esta Semana</option>
-                     <option value="THIS_MONTH">Este Mês</option>
-                     <option value="LAST_30_DAYS">Últimos 30 Dias</option>
-                     <option value="LAST_60_DAYS">Últimos 60 Dias</option>
-                     <option value="LAST_90_DAYS">Últimos 90 Dias</option>
-                     <option value="ALL_TIME">Todo o Período</option>
-                     <option value="CUSTOM">Personalizado</option>
-                  </select>
-
-                  {dateRange === 'CUSTOM' && (
-                     <div className="flex items-center gap-1 pr-2 animate-in fade-in slide-in-from-right-2">
-                        <input
-                           type="date"
-                           value={customStartDate}
-                           onChange={(e) => setCustomStartDate(e.target.value)}
-                           className="w-24 px-2 py-1 border border-slate-200 rounded text-xs"
-                        />
-                        <span className="text-slate-400">-</span>
-                        <input
-                           type="date"
-                           value={customEndDate}
-                           onChange={(e) => setCustomEndDate(e.target.value)}
-                           className="w-24 px-2 py-1 border border-slate-200 rounded text-xs"
-                        />
-                     </div>
-                  )}
-               </div>
-            </div>
+            )}
          </div>
 
          {/* VIEW TOGGLE */}
-         <div className="flex justify-center overflow-x-auto pb-2 md:pb-0">
-            <div className="bg-slate-200 p-1 rounded-xl flex shrink-0">
-               <button
-                  onClick={() => setViewMode('DRE')}
-                  className={`px-4 md:px-6 py-2 rounded-lg font-bold text-xs md:text-sm flex items-center gap-2 transition-all whitespace-nowrap ${viewMode === 'DRE' ? 'bg-white text-blue-900 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
-               >
-                  <BarChart3 size={16} /> DRE Gerencial
-               </button>
-               <button
-                  onClick={() => setViewMode('MOVEMENTS')}
-                  className={`px-4 md:px-6 py-2 rounded-lg font-bold text-xs md:text-sm flex items-center gap-2 transition-all whitespace-nowrap ${viewMode === 'MOVEMENTS' ? 'bg-white text-blue-900 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
-               >
-                  <LineChart size={16} /> Movimentações
-               </button>
-               <button
-                  onClick={() => setViewMode('CASH_CLOSING')}
-                  className={`px-4 md:px-6 py-2 rounded-lg font-bold text-xs md:text-sm flex items-center gap-2 transition-all whitespace-nowrap ${viewMode === 'CASH_CLOSING' ? 'bg-white text-blue-900 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
-               >
-                  <Lock size={16} /> Fechamento
-               </button>
+         {currentUser?.role === 'ADMIN' && (
+            <div className="flex justify-center overflow-x-auto pb-2 md:pb-0">
+               <div className="bg-slate-200 p-1 rounded-xl flex shrink-0">
+                  <button
+                     onClick={() => setViewMode('DRE')}
+                     className={`px-4 md:px-6 py-2 rounded-lg font-bold text-xs md:text-sm flex items-center gap-2 transition-all whitespace-nowrap ${viewMode === 'DRE' ? 'bg-white text-blue-900 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
+                  >
+                     <BarChart3 size={16} /> DRE Gerencial
+                  </button>
+                  <button
+                     onClick={() => setViewMode('MOVEMENTS')}
+                     className={`px-4 md:px-6 py-2 rounded-lg font-bold text-xs md:text-sm flex items-center gap-2 transition-all whitespace-nowrap ${viewMode === 'MOVEMENTS' ? 'bg-white text-blue-900 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
+                  >
+                     <LineChart size={16} /> Movimentações
+                  </button>
+                  <button
+                     onClick={() => setViewMode('CASH_CLOSING')}
+                     className={`px-4 md:px-6 py-2 rounded-lg font-bold text-xs md:text-sm flex items-center gap-2 transition-all whitespace-nowrap ${viewMode === 'CASH_CLOSING' ? 'bg-white text-blue-900 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
+                  >
+                     <Lock size={16} /> Fechamento
+                  </button>
+               </div>
             </div>
-         </div>
+         )}
 
          {viewMode === 'MOVEMENTS' && (
             <div className="space-y-6 animate-in fade-in">
