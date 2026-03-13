@@ -218,10 +218,11 @@ const Sales: React.FC<SalesProps> = ({ sales, products, customers, onAddSale, on
       const matchesSearch = normalizedProductName.includes(normalizedSearchTerm) || p.id.includes(posSearchTerm);
       const matchesCategory = posCategoryFilter === 'ALL' || p.category === posCategoryFilter;
 
-      if (selectedBranch === Branch.MATRIZ) {
-         // Atacado Filter: Only Ice products
-         const isIce = p.category.includes('Gelo');
-         return matchesSearch && isIce && matchesCategory;
+      if (selectedBranch === Branch.MATRIZ || isWholesale) {
+         // Atacado Filter: Only "gelo"
+         const isGelo = p.name.toLowerCase().includes('gelo') || p.category.toLowerCase().includes('gelo');
+
+         return matchesSearch && isGelo && matchesCategory;
       }
 
       return matchesSearch && matchesCategory;
@@ -915,12 +916,28 @@ const Sales: React.FC<SalesProps> = ({ sales, products, customers, onAddSale, on
 
                      {/* Cart Right Side */}
                      <div className="lg:col-span-2 bg-slate-900 rounded-[2rem] shadow-2xl flex flex-col overflow-hidden h-full">
-                        <div className="p-5 bg-blue-700 text-white flex justify-between items-center shadow-lg">
-                           <div className="flex items-center gap-3">
+                        <div className="p-4 bg-blue-700 text-white flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 shadow-lg flex-wrap">
+                           <div className="flex items-center gap-3 w-full sm:w-auto">
                               <Factory size={24} />
                               <span className="font-black text-lg uppercase tracking-tighter">Pedido de Atacado</span>
                            </div>
-                           <span className="px-4 py-1.5 bg-white/20 rounded-full text-xs font-black tracking-widest">{cart.length} ITENS</span>
+                           <div className="flex items-center gap-3 w-full sm:w-auto">
+                              {/* CUSTOMER SELECTION BUTTON (ATACADO) */}
+                              <button
+                                 onClick={() => setShowCustomerModal(true)}
+                                 className="flex-1 sm:flex-none flex items-center justify-center gap-2 bg-blue-800 hover:bg-blue-600 px-4 py-2 rounded-xl text-sm font-black transition-all border border-blue-500 shadow-sm group"
+                              >
+                                 <UserIcon size={18} className="group-hover:scale-110 transition-transform" />
+                                 {selectedCustomer ? (
+                                    <span className="truncate max-w-[150px]">{selectedCustomer.name}</span>
+                                 ) : (
+                                    'Vincular Cliente'
+                                 )}
+                              </button>
+                              <span className="hidden sm:inline-block px-4 py-1.5 bg-blue-900/50 rounded-full text-xs font-black tracking-widest border border-blue-600">
+                                 {cart.length} ITENS
+                              </span>
+                           </div>
                         </div>
 
                         <div className="flex-1 overflow-y-auto p-5 space-y-3 bg-slate-900/50 scrollbar-thin scrollbar-thumb-blue-800">
@@ -932,18 +949,20 @@ const Sales: React.FC<SalesProps> = ({ sales, products, customers, onAddSale, on
                            ) : (
                               cart.map(item => (
                                  <div key={`${item.product.id}-${item.negotiatedPrice}`} className="bg-slate-800/80 backdrop-blur-md p-5 rounded-2xl border border-white/5 flex items-center gap-4 hover:border-blue-500/50 transition-all group">
-                                    <div className="flex-1 min-w-0">
-                                       <h4 className="font-black text-base text-white truncate">{item.product.name}</h4>
-                                       <p className="text-xs text-blue-400 font-black uppercase tracking-widest">{formatCurrency(getProductPrice(item))} / un</p>
+                                    <div className="flex-1 min-w-0 pr-2">
+                                       <h4 className="font-black text-sm sm:text-base text-white break-words leading-tight">{item.product.name}</h4>
+                                       <p className="text-[10px] sm:text-xs text-blue-400 font-black uppercase tracking-widest mt-1">{formatCurrency(getProductPrice(item))} / un</p>
                                     </div>
-                                    <div className="flex items-center gap-2 bg-white/5 p-1 rounded-xl">
-                                       <button onClick={() => updateQuantity(item.product.id, -1, item.negotiatedPrice, item.isPack)} className="w-10 h-10 flex items-center justify-center bg-slate-700 text-white rounded-lg hover:bg-slate-600 transition-colors"><Minus size={16} strokeWidth={3} /></button>
-                                       <span className="w-10 text-center font-black text-xl text-white tabular-nums">{item.quantity}</span>
-                                       <button onClick={() => updateQuantity(item.product.id, 1, item.negotiatedPrice, item.isPack)} className="w-10 h-10 flex items-center justify-center bg-blue-600 text-white rounded-lg shadow-lg hover:bg-blue-500 transition-colors"><Plus size={16} strokeWidth={3} /></button>
+                                    <div className="flex flex-col sm:flex-row items-end sm:items-center gap-2 bg-white/5 p-1 rounded-xl">
+                                       <div className="flex items-center">
+                                          <button onClick={() => updateQuantity(item.product.id, -1, item.negotiatedPrice, item.isPack)} className="w-8 h-8 sm:w-10 sm:h-10 flex items-center justify-center bg-slate-700 text-white rounded-lg hover:bg-slate-600 transition-colors"><Minus size={14} strokeWidth={3} /></button>
+                                          <span className="w-8 sm:w-10 text-center font-black text-lg sm:text-xl text-white tabular-nums">{item.quantity}</span>
+                                          <button onClick={() => updateQuantity(item.product.id, 1, item.negotiatedPrice, item.isPack)} className="w-8 h-8 sm:w-10 sm:h-10 flex items-center justify-center bg-blue-600 text-white rounded-lg shadow-lg hover:bg-blue-500 transition-colors"><Plus size={14} strokeWidth={3} /></button>
+                                       </div>
                                     </div>
-                                    <div className="text-right min-w-[120px]">
-                                       <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest block mb-0.5">Total Item</span>
-                                       <span className="font-black text-2xl text-white tracking-tighter tabular-nums">{formatCurrency(item.quantity * getProductPrice(item))}</span>
+                                    <div className="text-right min-w-[90px] sm:min-w-[110px]">
+                                       <span className="text-[9px] font-black text-slate-500 uppercase tracking-widest block mb-0.5">Total</span>
+                                       <span className="font-black text-lg sm:text-2xl text-white tracking-tighter tabular-nums">{formatCurrency(item.quantity * getProductPrice(item))}</span>
                                     </div>
                                     <button onClick={() => removeFromCart(item.product.id, item.negotiatedPrice, item.isPack)} className="text-rose-400 p-2 hover:bg-rose-500/10 rounded-xl transition-all opacity-40 group-hover:opacity-100"><Trash2 size={24} /></button>
                                  </div>
@@ -983,18 +1002,38 @@ const Sales: React.FC<SalesProps> = ({ sales, products, customers, onAddSale, on
                   <div className="flex flex-col gap-3 flex-1 min-h-0 overflow-hidden animate-in fade-in zoom-in-95 duration-500">
                      <div className="bg-white rounded-[2rem] shadow-[0_20px_50px_rgba(0,0,0,0.08)] border-2 border-slate-100 flex flex-col overflow-hidden h-full relative">
                         {/* Header Banner */}
-                        <div className="p-4 bg-gradient-to-r from-orange-500 to-orange-600 text-white flex justify-between items-center shadow-lg relative z-10">
-                           <div className="flex items-center gap-4">
-                              <div className="p-2 bg-white/20 rounded-xl backdrop-blur-md">
-                                 <ShoppingCart size={24} className="animate-pulse" />
+                        <div className="p-4 bg-gradient-to-r from-orange-500 to-orange-600 text-white flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4 shadow-lg relative z-10">
+                           <div className="flex items-center gap-4 w-full lg:w-auto justify-between">
+                              <div className="flexItems-center gap-4 flex tracking-tighter">
+                                 <div className="p-2 bg-white/20 rounded-xl backdrop-blur-md">
+                                    <ShoppingCart size={24} className="animate-pulse" />
+                                 </div>
+                                 <div>
+                                    <span className="font-black text-xs uppercase tracking-[0.2em] opacity-80 block">Terminal de Vendas</span>
+                                    <span className="font-black text-xl uppercase tracking-tighter">Caixa Varejo</span>
+                                 </div>
                               </div>
-                              <div>
-                                 <span className="font-black text-xs uppercase tracking-[0.2em] opacity-80 block">Terminal de Vendas</span>
-                                 <span className="font-black text-xl uppercase tracking-tighter">Caixa Varejo</span>
+                              <div className="flex lg:hidden flex-col items-end">
+                                 <span className="text-[10px] font-black opacity-70 uppercase">Operador</span>
+                                 <span className="text-sm font-bold truncate max-w-[100px]">{currentUser.name}</span>
                               </div>
                            </div>
-                           <div className="flex items-center gap-4">
-                              <div className="hidden md:flex flex-col items-end">
+
+                           <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 w-full lg:w-auto">
+                              {/* CUSTOMER SELECTION BUTTON (VAREJO) */}
+                              <button
+                                 onClick={() => setShowCustomerModal(true)}
+                                 className="flex-1 sm:flex-none flex items-center justify-center gap-2 bg-white/20 hover:bg-white/30 px-5 py-2.5 rounded-xl text-sm font-black backdrop-blur-sm transition-all border border-white/20 shadow-sm group"
+                              >
+                                 <UserIcon size={18} className="group-hover:scale-110 transition-transform" />
+                                 {selectedCustomer ? (
+                                    <span className="truncate max-w-[130px] sm:max-w-[200px]">{selectedCustomer.name}</span>
+                                 ) : (
+                                    'Vincular Cliente (Opcional)'
+                                 )}
+                              </button>
+
+                              <div className="hidden lg:flex flex-col items-end px-2">
                                  <span className="text-[10px] font-black opacity-70 uppercase">Operador</span>
                                  <span className="text-sm font-bold">{currentUser.name}</span>
                               </div>
@@ -1025,34 +1064,36 @@ const Sales: React.FC<SalesProps> = ({ sales, products, customers, onAddSale, on
                                        {/* Decorative accent */}
                                        <div className="absolute left-0 top-0 bottom-0 w-1.5 bg-orange-500 opacity-0 group-hover:opacity-100 transition-opacity"></div>
 
-                                       <div className="flex-1 min-w-0">
-                                          <div className="flex items-center gap-2 mb-1">
-                                             <span className="text-[10px] font-black text-orange-500 bg-orange-50 px-2 py-0.5 rounded-full uppercase tracking-widest">{item.product.category}</span>
-                                             {item.isPack && <span className="text-[10px] font-black text-purple-600 bg-purple-50 px-2 py-0.5 rounded-full uppercase tracking-widest">Fardo</span>}
+                                       <div className="flex-1 min-w-0 pr-2">
+                                          <div className="flex items-center gap-2 mb-1 flex-wrap">
+                                             <span className="text-[9px] sm:text-[10px] font-black text-orange-500 bg-orange-50 px-2 py-0.5 rounded-full uppercase tracking-widest">{item.product.category}</span>
+                                             {item.isPack && <span className="text-[9px] sm:text-[10px] font-black text-purple-600 bg-purple-50 px-2 py-0.5 rounded-full uppercase tracking-widest">Fardo</span>}
                                           </div>
-                                          <h4 className="font-black text-xl md:text-2xl lg:text-3xl text-slate-900 leading-tight truncate">{item.product.name}</h4>
-                                          <p className="text-sm md:text-base text-slate-500 font-bold tracking-tight mt-0.5">{formatCurrency(getProductPrice(item))} <span className="text-xs opacity-60">por {item.product.unit}</span></p>
+                                          <h4 className="font-black text-base sm:text-lg md:text-xl text-slate-900 leading-tight break-words">{item.product.name}</h4>
+                                          <p className="text-xs sm:text-sm md:text-base text-slate-500 font-bold tracking-tight mt-0.5">{formatCurrency(getProductPrice(item))} <span className="text-[10px] sm:text-xs opacity-60">por {item.product.unit}</span></p>
                                        </div>
 
-                                       <div className="flex items-center gap-4 bg-slate-100/50 p-2 rounded-2xl group-hover:bg-orange-50 transition-colors">
-                                          <button
-                                             onClick={() => updateQuantity(item.product.id, -1, item.negotiatedPrice, item.isPack)}
-                                             className="w-12 h-12 flex items-center justify-center bg-white rounded-xl border border-slate-200 shadow-sm hover:text-orange-600 hover:border-orange-300 active:scale-90 transition-all font-black"
-                                          >
-                                             <Minus size={20} strokeWidth={3} />
-                                          </button>
-                                          <span className="w-14 text-center font-black text-3xl text-slate-900 tabular-nums">{item.quantity}</span>
-                                          <button
-                                             onClick={() => updateQuantity(item.product.id, 1, item.negotiatedPrice, item.isPack)}
-                                             className="w-12 h-12 flex items-center justify-center bg-orange-500 text-white rounded-xl shadow-[0_4px_12px_rgba(249,115,22,0.3)] hover:bg-orange-600 active:scale-95 transition-all font-black"
-                                          >
-                                             <Plus size={20} strokeWidth={3} />
-                                          </button>
+                                       <div className="flex flex-col sm:flex-row items-end sm:items-center gap-2 sm:gap-4 bg-slate-100/50 p-2 rounded-2xl group-hover:bg-orange-50 transition-colors">
+                                          <div className="flex items-center">
+                                             <button
+                                                onClick={() => updateQuantity(item.product.id, -1, item.negotiatedPrice, item.isPack)}
+                                                className="w-10 h-10 sm:w-12 sm:h-12 flex items-center justify-center bg-white rounded-xl border border-slate-200 shadow-sm hover:text-orange-600 hover:border-orange-300 active:scale-90 transition-all font-black"
+                                             >
+                                                <Minus size={16} strokeWidth={3} className="sm:w-5 sm:h-5" />
+                                             </button>
+                                             <span className="w-10 sm:w-14 text-center font-black text-xl sm:text-3xl text-slate-900 tabular-nums">{item.quantity}</span>
+                                             <button
+                                                onClick={() => updateQuantity(item.product.id, 1, item.negotiatedPrice, item.isPack)}
+                                                className="w-10 h-10 sm:w-12 sm:h-12 flex items-center justify-center bg-orange-500 text-white rounded-xl shadow-[0_4px_12px_rgba(249,115,22,0.3)] hover:bg-orange-600 active:scale-95 transition-all font-black"
+                                             >
+                                                <Plus size={16} strokeWidth={3} className="sm:w-5 sm:h-5" />
+                                             </button>
+                                          </div>
                                        </div>
 
-                                       <div className="text-right min-w-[120px] md:min-w-[160px]">
-                                          <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest block mb-0.5">Subtotal Item</span>
-                                          <span className="font-black text-xl md:text-3xl text-slate-900 tracking-tighter tabular-nums">
+                                       <div className="text-right min-w-[90px] sm:min-w-[120px] md:min-w-[160px]">
+                                          <span className="text-[8px] sm:text-[9px] font-black text-slate-400 uppercase tracking-widest block mb-0.5">Subtotal</span>
+                                          <span className="font-black text-lg sm:text-xl md:text-3xl text-slate-900 tracking-tighter tabular-nums">
                                              {formatCurrency(item.quantity * getProductPrice(item))}
                                           </span>
                                        </div>
