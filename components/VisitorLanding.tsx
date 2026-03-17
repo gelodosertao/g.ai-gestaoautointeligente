@@ -25,8 +25,8 @@ const VisitorLanding: React.FC = () => {
                 {/* Content */}
                 <div className="relative z-10 text-center space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-1000">
                     <div className="flex justify-center mb-6">
-                        <div className="bg-white/10 backdrop-blur-md p-4 rounded-3xl border border-white/20 shadow-2xl">
-                            <img src="/logo.png" alt="Gelo do Sertão" className="h-32 md:h-48 w-auto object-contain drop-shadow-[0_0_20px_rgba(59,130,246,0.5)]" />
+                        <div className="bg-white/10 backdrop-blur-md p-6 md:p-8 rounded-[40px] border border-white/20 shadow-2xl">
+                            <img src="/logo.png" alt="Gelo do Sertão" className="h-48 md:h-72 w-auto object-contain drop-shadow-[0_0_30px_rgba(59,130,246,0.6)]" />
                         </div>
                     </div>
 
@@ -35,7 +35,7 @@ const VisitorLanding: React.FC = () => {
                             O Gelo que refresca o Sertão
                         </h1>
                         <p className="text-blue-200/80 text-lg md:text-xl font-medium max-w-2xl mx-auto leading-relaxed">
-                            Produção artesanal com tecnologia de ponta. Distribuindo pureza e frescor para toda a região de Barreiras e Ibotirama.
+                            Produção com tecnologia de ponta. Distribuindo pureza e frescor para toda a região de Barreiras e Ibotirama.
                         </p>
                     </div>
 
@@ -132,7 +132,7 @@ const VisitorLanding: React.FC = () => {
                     <div className="space-y-6">
                         <img src="/logo.png" alt="Gelo do Sertão" className="h-20 w-auto brightness-90 hover:brightness-110 transition-all" />
                         <p className="text-slate-400 text-sm leading-relaxed">
-                            Líder regional em produção e distribuição de gelo cristalino. Qualidade que você vê, frescor que você sente.
+                            Somos referência no gelo de sabor e líderes regionais em produção e distribuição de gelo cristalino.
                         </p>
                         <div className="flex gap-4">
                             <a href="#" className="p-2 bg-white/5 rounded-full text-slate-400 hover:text-white hover:bg-orange-500 transition-all">

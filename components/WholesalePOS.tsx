@@ -55,12 +55,11 @@ const WholesalePOS: React.FC<WholesalePOSProps> = ({
         segment: ''
     });
 
-    // Filter customers: Sellers only see their own, Admins/Supervisors see all
+    // Filter customers: Only Admin sees all. Sellers and Supervisors see only their own.
     const myCustomers = useMemo(() => {
         const isAdmin = currentUser.role === 'ADMIN';
-        const isSupervisor = currentUser.role === 'WHOLESALE_SUPERVISOR';
 
-        if (isAdmin || isSupervisor) return customers;
+        if (isAdmin) return customers;
         return customers.filter(c => c.creatorId === currentUser.id);
     }, [customers, currentUser]);
 

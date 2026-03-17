@@ -47,9 +47,8 @@ const Customers: React.FC<CustomersProps> = ({ customers, onAddCustomer, onImpor
             c.cpfCnpj?.includes(searchTerm);
 
         const isAdmin = currentUser.role === 'ADMIN';
-        const isSupervisor = currentUser.role === 'WHOLESALE_SUPERVISOR';
 
-        if (isAdmin || isSupervisor) return matchesSearch;
+        if (isAdmin) return matchesSearch;
         return matchesSearch && c.creatorId === currentUser.id;
     });
 
