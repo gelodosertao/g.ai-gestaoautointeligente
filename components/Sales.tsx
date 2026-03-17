@@ -1015,9 +1015,35 @@ const Sales: React.FC<SalesProps> = ({ sales, products, customers, onAddSale, on
                      </div>
                   </div>
                ) : (
-                  /* --- VAREJO VIEW: FULL WIDTH & ULTRA-PREMIUM --- */
-                  <div className="flex flex-col gap-3 flex-1 min-h-0 overflow-hidden animate-in fade-in zoom-in-95 duration-500">
-                     <div className="bg-white rounded-[2rem] shadow-[0_20px_50px_rgba(0,0,0,0.08)] border-2 border-slate-100 flex flex-col overflow-hidden h-full relative">
+                  /* --- VAREJO VIEW: ULTRA-PREMIUM WITH CATALOG --- */
+                  <div className="flex flex-col lg:grid lg:grid-cols-5 gap-4 flex-1 min-h-0 overflow-hidden animate-in fade-in zoom-in-95 duration-500">
+                     {/* Product Picker Left Side */}
+                     <div className="lg:col-span-2 bg-white rounded-3xl shadow-[0_10px_40px_rgba(0,0,0,0.04)] border border-slate-200 flex flex-col overflow-hidden">
+                        <div className="p-3 bg-slate-100/50 border-b border-slate-200 flex gap-2 overflow-x-auto scrollbar-thin">
+                           <button onClick={() => setPosCategoryFilter('ALL')} className={`px-5 py-2 rounded-xl text-xs font-black transition-all whitespace-nowrap ${posCategoryFilter === 'ALL' ? 'bg-orange-600 text-white shadow-lg shadow-orange-200' : 'bg-white text-slate-500 hover:bg-slate-200'} `}>TODOS</button>
+                           {availableCategories.map(cat => (<button key={cat} onClick={() => setPosCategoryFilter(cat)} className={`px-5 py-2 rounded-xl text-xs font-black transition-all whitespace-nowrap ${posCategoryFilter === cat ? 'bg-orange-600 text-white shadow-lg shadow-orange-200' : 'bg-white text-slate-500 hover:bg-slate-200'} `}>{cat.toUpperCase()}</button>))}
+                        </div>
+                        <div className="flex-1 overflow-y-auto p-4 grid grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 gap-3 bg-slate-50/20">
+                           {filteredPosProducts.map(product => (
+                              <button key={product.id} onClick={() => handleProductClick(product)} className="p-4 bg-white border border-slate-100 rounded-2xl hover:border-orange-500 hover:shadow-xl hover:-translate-y-0.5 text-left flex flex-col justify-between min-h-[140px] transition-all group relative overflow-hidden">
+                                 <div className="absolute top-0 right-0 p-2 opacity-10 group-hover:opacity-100 transition-opacity">
+                                    <Plus size={20} className="text-orange-500" />
+                                 </div>
+                                 <div>
+                                    <div className="flex items-center gap-1.5 mb-1">
+                                       <div className={`w-2 h-2 rounded-full ${getProductStock(product) > 10 ? 'bg-emerald-500' : 'bg-amber-500'}`}></div>
+                                       <span className="text-[10px] font-black text-slate-400 uppercase">Estoque: {getProductStock(product)}</span>
+                                    </div>
+                                    <p className="font-black text-sm text-slate-800 leading-tight line-clamp-2">{product.name}</p>
+                                 </div>
+                                 <p className="font-black text-xl text-orange-700 mt-2 tracking-tighter">{formatCurrency(product.priceFilial)}</p>
+                              </button>
+                           ))}
+                        </div>
+                     </div>
+
+                     {/* Cart Right Side */}
+                     <div className="lg:col-span-3 bg-white rounded-[2rem] shadow-[0_20px_50px_rgba(0,0,0,0.08)] border-2 border-slate-100 flex flex-col overflow-hidden h-full relative">
                         {/* Header Banner */}
                         <div className="p-4 bg-gradient-to-r from-orange-500 to-orange-600 text-white flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4 shadow-lg relative z-10">
                            <div className="flex items-center gap-4 w-full lg:w-auto justify-between">
