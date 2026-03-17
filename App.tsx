@@ -185,10 +185,14 @@ const App: React.FC = () => {
         if (newSale.branch === Branch.FILIAL) {
           return { ...prod, stockFilial: Math.max(0, prod.stockFilial - qtySold) };
         } else {
+          // For Matriz, only deduct if deposit is explicitly chosen
           if (newSale.matrizDeposit === 'Barreiras') {
             return { ...prod, stockMatrizBarreiras: Math.max(0, prod.stockMatrizBarreiras - qtySold) };
+          } else if (newSale.matrizDeposit === 'Ibotirama') {
+            return { ...prod, stockMatrizIbotirama: Math.max(0, prod.stockMatrizIbotirama - qtySold) };
           }
-          return { ...prod, stockMatrizIbotirama: Math.max(0, prod.stockMatrizIbotirama - qtySold) };
+          // If no deposit chosen (e.g. Pending from Wholesale POS), do not deduct yet
+          return prod;
         }
       }
       return prod;
@@ -313,12 +317,69 @@ const App: React.FC = () => {
   };
 
   const handleUpdateSale = async (updatedSale: Sale) => {
+    const oldSale = sales.find(s => s.id === updatedSale.id);
     setSales(prev => prev.map(s => s.id === updatedSale.id ? updatedSale : s));
-    try {
-      await dbSales.update(updatedSale);
-    } catch (e) {
-      console.error(e);
-      alert("Erro ao atualizar venda no banco.");
+
+    // If it was Pending/Cancelled and now it's Completed, we should deduct stock and record financial
+    if (oldSale && oldSale.status !== 'Completed' && updatedSale.status === 'Completed') {
+      const soldQuantities: Record<string, number> = {};
+      updatedSale.items.forEach(item => {
+        const product = products.find(p => p.id === item.productId);
+        if (product?.comboItems && product.comboItems.length > 0) {
+          product.comboItems.forEach(component => {
+            soldQuantities[component.productId] = (soldQuantities[component.productId] || 0) + (component.quantity * item.quantity);
+          });
+        } else {
+          soldQuantities[item.productId] = (soldQuantities[item.productId] || 0) + item.quantity;
+        }
+      });
+
+      const updatedProductsList = products.map(prod => {
+        const qtySold = soldQuantities[prod.id];
+        if (qtySold) {
+          if (updatedSale.branch === Branch.FILIAL) {
+            return { ...prod, stockFilial: Math.max(0, prod.stockFilial - qtySold) };
+          } else {
+            if (updatedSale.matrizDeposit === 'Barreiras') {
+              return { ...prod, stockMatrizBarreiras: Math.max(0, prod.stockMatrizBarreiras - qtySold) };
+            } else if (updatedSale.matrizDeposit === 'Ibotirama') {
+              return { ...prod, stockMatrizIbotirama: Math.max(0, prod.stockMatrizIbotirama - qtySold) };
+            }
+          }
+        }
+        return prod;
+      });
+      setProducts(updatedProductsList);
+
+      const newFinancial: FinancialRecord = {
+        id: crypto.randomUUID(),
+        date: updatedSale.date,
+        description: `Finalização Venda #${updatedSale.id} - ${updatedSale.customerName}`,
+        amount: updatedSale.total,
+        type: 'Income',
+        category: 'Vendas',
+        branch: updatedSale.branch
+      };
+      setFinancials(prev => [newFinancial, ...prev]);
+
+      try {
+        await dbSales.update(updatedSale);
+        await dbFinancials.addBatch([newFinancial], currentUser!.tenantId);
+        for (const prodId of Object.keys(soldQuantities)) {
+          const product = updatedProductsList.find(p => p.id === prodId);
+          if (product) await dbProducts.update(product);
+        }
+      } catch (e) {
+        console.error("Erro ao atualizar stock/financeiro na finalização:", e);
+      }
+    } else {
+      // Just update the sale info
+      try {
+        await dbSales.update(updatedSale);
+      } catch (e) {
+        console.error(e);
+        alert("Erro ao atualizar venda no banco.");
+      }
     }
   };
 

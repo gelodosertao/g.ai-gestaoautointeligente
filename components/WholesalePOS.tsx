@@ -38,7 +38,6 @@ const WholesalePOS: React.FC<WholesalePOSProps> = ({
     // Checkout State
     const [isCheckingOut, setIsCheckingOut] = useState(false);
     const [paymentMethod, setPaymentMethod] = useState<'Pix' | 'Credit' | 'Debit' | 'Cash' | 'Split'>('Pix');
-    const [matrizDeposit, setMatrizDeposit] = useState<'Ibotirama' | 'Barreiras'>('Ibotirama');
 
     // Edit Sale State
     const [showEditSaleModal, setShowEditSaleModal] = useState(false);
@@ -147,12 +146,11 @@ const WholesalePOS: React.FC<WholesalePOSProps> = ({
             total: cartTotal,
             items: saleItems,
             branch: Branch.MATRIZ,
-            matrizDeposit: matrizDeposit,
-            status: 'Completed',  // Or Pending if supervisor needs to approve? Let's say Completed.
+            status: 'Pending', // Envia como Pendente para o ADM conferir estoque e pagamento
             paymentMethod,
             hasInvoice: false,
             source: 'WHOLESALE_POS',
-            amountPaid: paymentMethod === 'Split' ? 0 : cartTotal, // If "Fiado", paid is 0 initially or partial
+            amountPaid: 0, // Inicia como 0, pois o ADM confirma recebimento
             sellerId: currentUser.id,
             sellerName: currentUser.name,
             sellerRole: currentUser.role,
@@ -211,24 +209,6 @@ const WholesalePOS: React.FC<WholesalePOSProps> = ({
 
     const renderCatalog = () => (
         <div className="p-4 pb-24">
-            <div className="mb-4">
-                <label className="block text-xs font-bold text-slate-500 mb-1 uppercase tracking-wider">Estoque Origem</label>
-                <div className="flex bg-slate-200 rounded-lg p-1">
-                    <button
-                        className={`flex-1 py-2 text-sm font-bold rounded-md transition-all ${matrizDeposit === 'Ibotirama' ? 'bg-white shadow text-blue-700' : 'text-slate-500'}`}
-                        onClick={() => setMatrizDeposit('Ibotirama')}
-                    >
-                        Ibotirama
-                    </button>
-                    <button
-                        className={`flex-1 py-2 text-sm font-bold rounded-md transition-all ${matrizDeposit === 'Barreiras' ? 'bg-white shadow text-blue-700' : 'text-slate-500'}`}
-                        onClick={() => setMatrizDeposit('Barreiras')}
-                    >
-                        Barreiras
-                    </button>
-                </div>
-            </div>
-
             <div className="relative mb-6">
                 <label className="block text-xs font-bold text-slate-500 mb-1 uppercase tracking-wider">Filtrar por Categoria</label>
                 <div className="flex bg-slate-100 rounded-2xl p-1 gap-1 border border-slate-200 shadow-inner mb-3">
@@ -282,7 +262,7 @@ const WholesalePOS: React.FC<WholesalePOSProps> = ({
             <div className="grid grid-cols-2 gap-3">
                 {filteredProducts.map(product => {
                     const cartItem = cart.find(c => c.product.id === product.id);
-                    const currentStock = matrizDeposit === 'Ibotirama' ? product.stockMatrizIbotirama : product.stockMatrizBarreiras;
+                    const totalStock = product.stockMatrizIbotirama + product.stockMatrizBarreiras;
 
                     return (
                         <div
@@ -305,7 +285,7 @@ const WholesalePOS: React.FC<WholesalePOSProps> = ({
                                     {product.category === 'Gelo Sabor' && <span className="text-[10px] text-orange-500 ml-1 font-bold italic">dinâmico</span>}
                                 </p>
                                 <p className="text-[10px] text-slate-400 mb-3 flex items-center gap-1 font-bold">
-                                    <MapPin size={12} className="text-slate-300" /> Sto: <span className={currentStock > 0 ? 'text-emerald-500' : 'text-rose-500'}>{currentStock}</span>
+                                    <MapPin size={12} className="text-slate-300" /> Sto Total: <span className={totalStock > 0 ? 'text-emerald-500' : 'text-rose-500'}>{totalStock}</span>
                                 </p>
                             </div>
 
@@ -414,7 +394,7 @@ const WholesalePOS: React.FC<WholesalePOSProps> = ({
                                 <span className="text-slate-300">Total do Pedido:</span>
                                 <span className="text-2xl font-black text-orange-400">R$ {cartTotal.toFixed(2)}</span>
                             </div>
-                            <p className="text-xs text-slate-400 mt-2 text-right">Origem: {matrizDeposit}</p>
+                            <p className="text-xs text-slate-400 mt-2 text-right italic">* O estoque e o recebimento serão conferidos pelo ADM.</p>
                         </div>
 
                         <button
