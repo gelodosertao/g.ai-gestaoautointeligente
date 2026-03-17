@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+﻿import React, { useState, useMemo } from 'react';
 import { Product, Sale, Customer, User, Branch, SaleItem } from '../types';
 import { ShoppingCart, LogOut, User as UserIcon, Plus, Minus, Search, CheckCircle, ArrowLeft, History, Store, MapPin, Edit, Trash2, Save, X, Printer, Check } from 'lucide-react';
 import html2canvas from 'html2canvas';
@@ -1085,65 +1085,56 @@ const WholesalePOS: React.FC<WholesalePOSProps> = ({
 
             {/* Hidden Receipt for Printing */}
             <div id="wholesale-receipt" className={`fixed -left-[2000px] top-0 ${isPrinting ? '' : 'hidden'}`}
-                style={{ width: '380px', backgroundColor: '#0f172a', color: '#f1f5f9', fontFamily: 'Arial, Helvetica, sans-serif', padding: '24px', boxSizing: 'border-box' }}>
+                style={{ width: '300px', backgroundColor: '#0f172a', color: '#e2e8f0', fontFamily: 'Arial, sans-serif', padding: '20px', boxSizing: 'border-box' }}>
 
                 {/* Header */}
-                <div style={{ textAlign: 'center', borderBottom: '2px solid #334155', paddingBottom: '16px', marginBottom: '16px' }}>
-                    <h3 style={{ fontSize: '22px', fontWeight: 900, textTransform: 'uppercase', letterSpacing: '2px', margin: 0, color: '#ffffff' }}>Gelo do Sertão</h3>
-                    <p style={{ fontSize: '11px', fontWeight: 700, margin: '4px 0 0', color: '#94a3b8' }}>CNPJ: 49.344.385/0001-44</p>
-                    <p style={{ fontSize: '11px', margin: '2px 0 0', color: '#94a3b8' }}>Ibotirama - BA</p>
+                <div style={{ textAlign: 'center', paddingBottom: '12px', marginBottom: '12px', borderBottom: '1px solid #334155' }}>
+                    <p style={{ fontSize: '18px', fontWeight: 900, margin: 0, color: '#fff', textTransform: 'uppercase', letterSpacing: '1px' }}>Gelo do Sertão</p>
+                    <p style={{ fontSize: '10px', margin: '4px 0 0', color: '#64748b' }}>CNPJ: 49.344.385/0001-44 · Ibotirama-BA</p>
                 </div>
 
-                {/* Order Info */}
-                <div style={{ textAlign: 'center', borderBottom: '2px solid #334155', paddingBottom: '12px', marginBottom: '16px' }}>
-                    <p style={{ fontSize: '14px', fontWeight: 900, textTransform: 'uppercase', margin: 0, color: '#fb923c' }}>Pedido de Atacado</p>
-                    <p style={{ fontSize: '11px', letterSpacing: '3px', margin: '4px 0', color: '#64748b' }}>{lastCompletedSale?.id.substring(0, 8).toUpperCase()}</p>
-                    <p style={{ fontSize: '12px', margin: '2px 0 0', color: '#cbd5e1' }}>{lastCompletedSale?.createdAt ? new Date(lastCompletedSale.createdAt).toLocaleString('pt-BR') : new Date().toLocaleString('pt-BR')}</p>
+                {/* Order */}
+                <div style={{ textAlign: 'center', paddingBottom: '10px', marginBottom: '12px', borderBottom: '1px solid #334155' }}>
+                    <p style={{ fontSize: '13px', fontWeight: 900, margin: 0, color: '#fb923c', textTransform: 'uppercase' }}>Pedido Atacado</p>
+                    <p style={{ fontSize: '10px', margin: '4px 0', color: '#64748b', letterSpacing: '2px' }}>#{lastCompletedSale?.id.substring(0, 8).toUpperCase()}</p>
+                    <p style={{ fontSize: '11px', margin: 0, color: '#94a3b8' }}>{lastCompletedSale?.createdAt ? new Date(lastCompletedSale.createdAt).toLocaleString('pt-BR') : new Date().toLocaleString('pt-BR')}</p>
                 </div>
 
-                {/* Customer / Seller Info */}
-                <div style={{ marginBottom: '16px', fontSize: '12px', lineHeight: '20px', color: '#e2e8f0' }}>
-                    <p style={{ margin: 0 }}><strong style={{ color: '#94a3b8' }}>CLIENTE:</strong> {lastCompletedSale?.customerName.toUpperCase()}</p>
-                    <p style={{ margin: 0 }}><strong style={{ color: '#94a3b8' }}>VENDEDOR:</strong> {lastCompletedSale?.sellerName?.toUpperCase() || 'ADM'}</p>
-                    <p style={{ margin: 0 }}><strong style={{ color: '#94a3b8' }}>STATUS:</strong> {lastCompletedSale?.status === 'Pending' ? 'PENDENTE' : lastCompletedSale?.status?.toUpperCase()}</p>
+                {/* Client/Seller */}
+                <div style={{ textAlign: 'center', fontSize: '11px', marginBottom: '12px', lineHeight: '18px', color: '#cbd5e1' }}>
+                    <p style={{ margin: 0 }}><span style={{ color: '#64748b' }}>Cliente:</span> {lastCompletedSale?.customerName}</p>
+                    <p style={{ margin: 0 }}><span style={{ color: '#64748b' }}>Vendedor:</span> {lastCompletedSale?.sellerName || 'ADM'}</p>
+                    <p style={{ margin: 0 }}><span style={{ color: '#64748b' }}>Status:</span> {lastCompletedSale?.status === 'Pending' ? 'Pendente' : lastCompletedSale?.status}</p>
                 </div>
 
-                {/* Items Table */}
-                <table style={{ width: '100%', fontSize: '12px', marginBottom: '16px', borderCollapse: 'collapse' }}>
-                    <thead>
-                        <tr style={{ borderBottom: '2px solid #475569' }}>
-                            <th style={{ textAlign: 'left', padding: '6px 0', color: '#94a3b8', fontWeight: 900, textTransform: 'uppercase', fontSize: '10px', letterSpacing: '1px' }}>Item</th>
-                            <th style={{ textAlign: 'center', padding: '6px 4px', color: '#94a3b8', fontWeight: 900, textTransform: 'uppercase', fontSize: '10px', letterSpacing: '1px', whiteSpace: 'nowrap', width: '50px' }}>Qtd</th>
-                            <th style={{ textAlign: 'right', padding: '6px 0', color: '#94a3b8', fontWeight: 900, textTransform: 'uppercase', fontSize: '10px', letterSpacing: '1px', whiteSpace: 'nowrap', width: '90px' }}>Valor</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {lastCompletedSale?.items.map((item, idx) => (
-                            <tr key={idx} style={{ borderBottom: '1px solid #1e293b' }}>
-                                <td style={{ padding: '8px 4px 8px 0', color: '#e2e8f0', fontWeight: 600, lineHeight: '16px' }}>{item.productName}</td>
-                                <td style={{ padding: '8px 4px', textAlign: 'center', fontWeight: 900, color: '#ffffff', whiteSpace: 'nowrap' }}>{item.quantity}</td>
-                                <td style={{ padding: '8px 0 8px 4px', textAlign: 'right', fontWeight: 700, color: '#ffffff', whiteSpace: 'nowrap' }}>R$ {(item.priceAtSale * item.quantity).toFixed(2)}</td>
-                            </tr>
-                        ))}
-                    </tbody>
-                </table>
+                {/* Items - vertical stacked, centered, no cut-off */}
+                <div style={{ borderTop: '1px solid #334155', borderBottom: '1px solid #334155', paddingTop: '8px', paddingBottom: '4px', marginBottom: '12px' }}>
+                    <p style={{ fontSize: '9px', fontWeight: 900, color: '#64748b', textTransform: 'uppercase', letterSpacing: '1px', margin: '0 0 6px', textAlign: 'center' }}>Itens do Pedido</p>
+                    {lastCompletedSale?.items.map((item, idx) => (
+                        <div key={idx} style={{ marginBottom: '8px', textAlign: 'center' }}>
+                            <p style={{ fontSize: '12px', fontWeight: 700, margin: 0, color: '#fff', lineHeight: '16px' }}>{item.productName}</p>
+                            <p style={{ fontSize: '11px', margin: '2px 0 0', color: '#94a3b8' }}>
+                                {item.quantity} un × R$ {item.priceAtSale.toFixed(2)} = <span style={{ color: '#fff', fontWeight: 900 }}>R$ {(item.priceAtSale * item.quantity).toFixed(2)}</span>
+                            </p>
+                        </div>
+                    ))}
+                </div>
 
-                {/* Totals */}
-                <div style={{ borderTop: '2px solid #475569', paddingTop: '12px', marginBottom: '8px' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
-                        <span style={{ fontSize: '12px', color: '#94a3b8', textTransform: 'uppercase', fontWeight: 700 }}>Forma de Pagto</span>
-                        <span style={{ fontSize: '13px', fontWeight: 900, color: '#e2e8f0' }}>{lastCompletedSale?.paymentMethod === 'Cash' ? 'DINHEIRO' : lastCompletedSale?.paymentMethod === 'Pix' ? 'PIX' : lastCompletedSale?.paymentMethod?.toUpperCase()}</span>
-                    </div>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '8px', padding: '12px', backgroundColor: '#1e293b', borderRadius: '12px' }}>
-                        <span style={{ fontSize: '16px', fontWeight: 900, color: '#fb923c', textTransform: 'uppercase', letterSpacing: '2px' }}>Total</span>
-                        <span style={{ fontSize: '24px', fontWeight: 900, color: '#ffffff', letterSpacing: '-1px' }}>R$ {lastCompletedSale?.total.toFixed(2)}</span>
+                {/* Payment + Total */}
+                <div style={{ textAlign: 'center', marginBottom: '12px' }}>
+                    <p style={{ fontSize: '11px', color: '#94a3b8', margin: '0 0 4px' }}>
+                        Pagamento: <span style={{ color: '#e2e8f0', fontWeight: 700 }}>{lastCompletedSale?.paymentMethod === 'Cash' ? 'Dinheiro' : lastCompletedSale?.paymentMethod === 'Pix' ? 'PIX' : lastCompletedSale?.paymentMethod}</span>
+                    </p>
+                    <div style={{ backgroundColor: '#1e293b', borderRadius: '10px', padding: '12px', marginTop: '8px' }}>
+                        <p style={{ fontSize: '10px', fontWeight: 900, color: '#fb923c', textTransform: 'uppercase', letterSpacing: '2px', margin: '0 0 4px' }}>Total do Pedido</p>
+                        <p style={{ fontSize: '26px', fontWeight: 900, color: '#fff', margin: 0, letterSpacing: '-1px' }}>R$ {lastCompletedSale?.total.toFixed(2)}</p>
                     </div>
                 </div>
 
                 {/* Footer */}
-                <div style={{ marginTop: '24px', textAlign: 'center', borderTop: '2px dashed #334155', paddingTop: '16px', paddingBottom: '24px' }}>
-                    <p style={{ fontSize: '12px', fontWeight: 900, textTransform: 'uppercase', margin: 0, color: '#cbd5e1' }}>Obrigado pela preferência!</p>
-                    <p style={{ fontSize: '9px', marginTop: '8px', fontStyle: 'italic', color: '#64748b' }}>Sistema Gelo do Sertão • Gestão Inteligente</p>
+                <div style={{ textAlign: 'center', borderTop: '1px dashed #334155', paddingTop: '12px', paddingBottom: '16px' }}>
+                    <p style={{ fontSize: '11px', fontWeight: 700, margin: 0, color: '#94a3b8' }}>Obrigado pela preferência!</p>
+                    <p style={{ fontSize: '8px', margin: '6px 0 0', color: '#475569', fontStyle: 'italic' }}>Gelo do Sertão · Gestão Inteligente</p>
                 </div>
             </div>
 
