@@ -29,6 +29,7 @@ const WholesalePOS: React.FC<WholesalePOSProps> = ({
     onDeleteSale,
     onBack
 }) => {
+    const isAdmin = currentUser.role === 'ADMIN';
     const [activeTab, setActiveTab] = useState<'CATALOG' | 'CART' | 'HISTORY'>('CATALOG');
     const [searchTerm, setSearchTerm] = useState('');
     const [categoryFilter, setCategoryFilter] = useState<'ALL' | 'Gelo Cubo' | 'Gelo Sabor'>('ALL');
@@ -41,12 +42,17 @@ const WholesalePOS: React.FC<WholesalePOSProps> = ({
     // Checkout State
     const [isCheckingOut, setIsCheckingOut] = useState(false);
     const [paymentMethod, setPaymentMethod] = useState<'Pix' | 'Credit' | 'Debit' | 'Cash' | 'Split'>('Pix');
+    // ADM can assign sale to a seller
+    const [assignedSellerId, setAssignedSellerId] = useState<string>('');
+
+    // Inline customer registration (inside checkout — no lost cart)
+    const [showInlineCustomer, setShowInlineCustomer] = useState(false);
 
     // Edit Sale State
     const [showEditSaleModal, setShowEditSaleModal] = useState(false);
     const [editingSale, setEditingSale] = useState<Sale | null>(null);
 
-    // Customer Management Mode
+    // Customer Management Mode (legacy modal kept for non-checkout contexts)
     const [showAddCustomerModal, setShowAddCustomerModal] = useState(false);
     const [lastCompletedSale, setLastCompletedSale] = useState<Sale | null>(null);
     const [showSuccessModal, setShowSuccessModal] = useState(false);
@@ -80,29 +86,49 @@ const WholesalePOS: React.FC<WholesalePOSProps> = ({
         }).sort((a, b) => a.category.localeCompare(b.category));
     }, [products, searchTerm, categoryFilter]);
 
-    // My Sales History
+    // Sales History (filtered per role)
     const mySales = useMemo(() => {
-        // Only consider Wholesale sales
         let relevantSales = sales.filter(s => s.source === 'WHOLESALE_POS');
-
-        // Filter by Month
         if (monthFilter) {
             relevantSales = relevantSales.filter(s => (s.createdAt || s.date).startsWith(monthFilter));
         }
-
+        if (isAdmin) return relevantSales.sort((a, b) => (b.createdAt || '').localeCompare(a.createdAt || ''));
         if (currentUser.role === 'WHOLESALE_SUPERVISOR') {
-            // Supervisor sees their own and representative sales
             return relevantSales.filter(s => s.sellerId === currentUser.id || s.sellerRole === 'WHOLESALE_REPRESENTATIVE')
                 .sort((a, b) => (b.createdAt || '').localeCompare(a.createdAt || ''));
-        } else if (currentUser.role === 'WHOLESALE_REPRESENTATIVE') {
-            // Representative sees only their own
-            return relevantSales.filter(s => s.sellerId === currentUser.id)
-                .sort((a, b) => (b.createdAt || '').localeCompare(a.createdAt || ''));
         }
+        // WHOLESALE_REPRESENTATIVE — only their own
+        return relevantSales.filter(s => s.sellerId === currentUser.id)
+            .sort((a, b) => (b.createdAt || '').localeCompare(a.createdAt || ''));
+    }, [sales, currentUser, monthFilter, isAdmin]);
 
-        // Admins can see all if they somehow use the POS
-        return relevantSales.sort((a, b) => (b.createdAt || '').localeCompare(a.createdAt || ''));
-    }, [sales, currentUser, monthFilter]);
+    // ADM: commission summary grouped by seller
+    const sellerSummary = useMemo(() => {
+        if (!isAdmin) return [];
+        const map: Record<string, { name: string; role: string; total: number; commission: number; count: number }> = {};
+        mySales.forEach(s => {
+            const sid = s.sellerId || 'unknown';
+            if (!map[sid]) map[sid] = { name: s.sellerName || 'Desconhecido', role: s.sellerRole || '', total: 0, commission: 0, count: 0 };
+            const rate = s.sellerRole === 'WHOLESALE_SUPERVISOR' ? 0.05 : s.sellerRole === 'WHOLESALE_REPRESENTATIVE' ? 0.03 : 0;
+            map[sid].total += s.total;
+            map[sid].commission += s.commissionAmount ?? (s.total * rate);
+            map[sid].count += 1;
+        });
+        return Object.entries(map).map(([id, v]) => ({ id, ...v })).sort((a, b) => b.total - a.total);
+    }, [mySales, isAdmin]);
+
+    // Unique seller list from sales (for ADM assignment dropdown)
+    const sellerOptions = useMemo(() => {
+        const seen = new Set<string>();
+        const list: { id: string; name: string; role: string }[] = [];
+        sales.filter(s => s.source === 'WHOLESALE_POS' && s.sellerId).forEach(s => {
+            if (!seen.has(s.sellerId!)) {
+                seen.add(s.sellerId!);
+                list.push({ id: s.sellerId!, name: s.sellerName || s.sellerId!, role: s.sellerRole || '' });
+            }
+        });
+        return list;
+    }, [sales]);
 
     const addToCart = (product: Product) => {
         setCart(prev => {
@@ -175,6 +201,7 @@ const WholesalePOS: React.FC<WholesalePOSProps> = ({
             await onAddCustomer(customerToSave);
             setSelectedCustomer(customerToSave);
             setShowAddCustomerModal(false);
+            setShowInlineCustomer(false); // close inline panel too
             setNewCustomer({ name: '', cpfCnpj: '', phone: '', address: '', city: '', state: 'BA', segment: '' });
         } catch (e) {
             console.error(e);
@@ -193,9 +220,16 @@ const WholesalePOS: React.FC<WholesalePOSProps> = ({
             priceAtSale: getProductPrice(product),
         }));
 
-        const isSupervisor = currentUser.role === 'WHOLESALE_SUPERVISOR';
-        const isRepresentative = currentUser.role === 'WHOLESALE_REPRESENTATIVE';
-        const commissionRate = isSupervisor ? 0.05 : isRepresentative ? 0.03 : 0;
+        // ADM can assign the sale to a specific seller
+        let effectiveSellerId = currentUser.id;
+        let effectiveSellerName = currentUser.name;
+        let effectiveSellerRole: string = currentUser.role;
+        if (isAdmin && assignedSellerId) {
+            const found = sellerOptions.find(s => s.id === assignedSellerId);
+            if (found) { effectiveSellerId = found.id; effectiveSellerName = found.name; effectiveSellerRole = found.role; }
+        }
+
+        const commissionRate = effectiveSellerRole === 'WHOLESALE_SUPERVISOR' ? 0.05 : effectiveSellerRole === 'WHOLESALE_REPRESENTATIVE' ? 0.03 : 0;
         const commissionAmount = cartTotal * commissionRate;
 
         const newSale: Sale = {
@@ -211,9 +245,9 @@ const WholesalePOS: React.FC<WholesalePOSProps> = ({
             hasInvoice: false,
             source: 'WHOLESALE_POS',
             amountPaid: 0,
-            sellerId: currentUser.id,
-            sellerName: currentUser.name,
-            sellerRole: currentUser.role,
+            sellerId: effectiveSellerId,
+            sellerName: effectiveSellerName,
+            sellerRole: effectiveSellerRole,
             commissionAmount: commissionAmount,
         };
 
@@ -433,92 +467,114 @@ const WholesalePOS: React.FC<WholesalePOSProps> = ({
         }
 
         if (isCheckingOut) {
+            // Determined commission for display
+            let displayRole = currentUser.role as string;
+            if (isAdmin && assignedSellerId) {
+                const f = sellerOptions.find(s => s.id === assignedSellerId);
+                if (f) displayRole = f.role;
+            }
+            const displayCommissionRate = displayRole === 'WHOLESALE_SUPERVISOR' ? 0.05 : displayRole === 'WHOLESALE_REPRESENTATIVE' ? 0.03 : 0;
+
             return (
-                <div className="p-4 pb-24 animate-in fade-in slide-in-from-right-4 duration-300">
+                <div className="p-4 pb-28 animate-in fade-in slide-in-from-right-4 duration-300">
                     <button onClick={() => setIsCheckingOut(false)} className="flex items-center gap-2 text-slate-500 mb-6 font-medium">
                         <ArrowLeft size={18} /> Voltar ao Carrinho
                     </button>
 
-                    <h2 className="text-2xl font-black text-slate-800 mb-6">Finalizar Pedido</h2>
+                    <h2 className="text-2xl font-black text-slate-800 mb-4">Finalizar Pedido</h2>
 
-                    <div className="space-y-6">
+                    <div className="space-y-4">
                         {/* Customer Selection */}
                         <div className="bg-white p-4 rounded-xl shadow-sm border border-slate-100">
                             <div className="flex justify-between items-center mb-3">
-                                <label className="block text-sm font-bold text-slate-700">Cliente (Atacado)</label>
+                                <label className="block text-sm font-bold text-slate-700">Cliente</label>
                                 <button
-                                    onClick={() => setShowAddCustomerModal(true)}
-                                    className="text-xs bg-orange-50 text-orange-600 px-2 py-1 rounded-md font-bold flex items-center gap-1 hover:bg-orange-100 transition-all border border-orange-100"
+                                    onClick={() => setShowInlineCustomer(v => !v)}
+                                    className="text-xs bg-orange-50 text-orange-600 px-3 py-1.5 rounded-lg font-black flex items-center gap-1 hover:bg-orange-100 transition-all border border-orange-200"
                                 >
-                                    <Plus size={12} /> Novo Cliente
+                                    <Plus size={12} /> {showInlineCustomer ? 'Cancelar' : 'Novo Cliente'}
                                 </button>
                             </div>
 
-                            <select
-                                className="w-full p-3 bg-slate-50 border border-slate-200 rounded-lg outline-none focus:border-orange-500 font-medium text-slate-700 mb-2"
-                                value={selectedCustomer?.id || ''}
-                                onChange={(e) => {
-                                    const c = myCustomers.find(cus => cus.id === e.target.value);
-                                    setSelectedCustomer(c || null);
-                                }}
-                            >
-                                <option value="">-- Selecione o Cliente --</option>
-                                {myCustomers.map(c => (
-                                    <option key={c.id} value={c.id}>{c.name} {c.city ? `(${c.city})` : ''}</option>
-                                ))}
-                            </select>
-
-                            {selectedCustomer && (
-                                <div className="mt-2 p-2 bg-blue-50 rounded-lg border border-blue-100 flex items-center gap-2">
-                                    <div className="bg-blue-600 text-white p-1.5 rounded-full">
-                                        <UserIcon size={14} />
+                            {/* Inline customer registration — cart is preserved */}
+                            {showInlineCustomer ? (
+                                <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 space-y-3 animate-in slide-in-from-top-2 duration-200">
+                                    <p className="text-xs font-black text-blue-700 uppercase tracking-widest">Cadastro Rápido de Cliente</p>
+                                    <input type="text" placeholder="Nome / Razão Social *" className="w-full px-3 py-2 bg-white border border-blue-200 rounded-lg text-sm font-bold focus:outline-none focus:ring-2 focus:ring-blue-400" value={newCustomer.name} onChange={e => setNewCustomer({ ...newCustomer, name: e.target.value })} />
+                                    <div className="grid grid-cols-2 gap-2">
+                                        <input type="text" placeholder="Telefone" className="px-3 py-2 bg-white border border-blue-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-400" value={newCustomer.phone} onChange={e => setNewCustomer({ ...newCustomer, phone: e.target.value })} />
+                                        <input type="text" placeholder="Cidade" className="px-3 py-2 bg-white border border-blue-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-400" value={newCustomer.city} onChange={e => setNewCustomer({ ...newCustomer, city: e.target.value })} />
                                     </div>
-                                    <div className="flex-1">
-                                        <p className="text-xs font-bold text-blue-900">{selectedCustomer.name}</p>
-                                        <p className="text-[10px] text-blue-600 font-medium">{selectedCustomer.city || 'Cidade não informada'} • {selectedCustomer.phone || 'Sem telefone'}</p>
+                                    <div className="grid grid-cols-2 gap-2">
+                                        <input type="text" placeholder="CPF / CNPJ" className="px-3 py-2 bg-white border border-blue-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-400" value={newCustomer.cpfCnpj} onChange={e => setNewCustomer({ ...newCustomer, cpfCnpj: e.target.value })} />
+                                        <select className="px-3 py-2 bg-white border border-blue-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-400" value={newCustomer.segment} onChange={e => setNewCustomer({ ...newCustomer, segment: e.target.value })}>
+                                            <option value="">Segmento</option>
+                                            <option>Mercado</option><option>Posto</option><option>Conveniência</option>
+                                            <option>Restaurante</option><option>Evento</option><option>Outros</option>
+                                        </select>
                                     </div>
-                                    <button onClick={() => setSelectedCustomer(null)} className="text-blue-400 hover:text-blue-600">
-                                        <X size={16} />
+                                    <button onClick={handleRegisterCustomer} className="w-full bg-blue-600 hover:bg-blue-700 text-white py-3 rounded-xl font-black flex items-center justify-center gap-2 active:scale-95 transition-all text-sm">
+                                        <Check size={16} /> Salvar e Selecionar Cliente
                                     </button>
                                 </div>
+                            ) : (
+                                <>
+                                    <select className="w-full p-3 bg-slate-50 border border-slate-200 rounded-lg outline-none focus:border-orange-500 font-medium text-slate-700 mb-2" value={selectedCustomer?.id || ''} onChange={e => { const c = myCustomers.find(cus => cus.id === e.target.value); setSelectedCustomer(c || null); }}>
+                                        <option value="">-- Selecione o Cliente --</option>
+                                        {myCustomers.map(c => <option key={c.id} value={c.id}>{c.name} {c.city ? `(${c.city})` : ''}</option>)}
+                                    </select>
+                                    {selectedCustomer && (
+                                        <div className="mt-2 p-2 bg-blue-50 rounded-lg border border-blue-100 flex items-center gap-2">
+                                            <div className="bg-blue-600 text-white p-1.5 rounded-full"><UserIcon size={14} /></div>
+                                            <div className="flex-1">
+                                                <p className="text-xs font-bold text-blue-900">{selectedCustomer.name}</p>
+                                                <p className="text-[10px] text-blue-600 font-medium">{selectedCustomer.city || 'Cidade não informada'} • {selectedCustomer.phone || 'Sem telefone'}</p>
+                                            </div>
+                                            <button onClick={() => setSelectedCustomer(null)} className="text-blue-400 hover:text-blue-600"><X size={16} /></button>
+                                        </div>
+                                    )}
+                                </>
                             )}
                         </div>
+
+                        {/* ADM: Assign to seller */}
+                        {isAdmin && sellerOptions.length > 0 && (
+                            <div className="bg-white p-4 rounded-xl shadow-sm border border-yellow-200">
+                                <label className="block text-sm font-bold text-yellow-700 mb-2">Atribuir ao Vendedor (ADM)</label>
+                                <select className="w-full p-3 bg-yellow-50 border border-yellow-200 rounded-lg outline-none focus:border-yellow-400 font-medium text-slate-700" value={assignedSellerId} onChange={e => setAssignedSellerId(e.target.value)}>
+                                    <option value="">-- Lançar como ADM --</option>
+                                    {sellerOptions.map(s => <option key={s.id} value={s.id}>{s.name} ({s.role === 'WHOLESALE_SUPERVISOR' ? 'Supervisor' : 'Representante'})</option>)}
+                                </select>
+                            </div>
+                        )}
 
                         {/* Payment Method */}
                         <div className="bg-white p-4 rounded-xl shadow-sm border border-slate-100">
                             <label className="block text-sm font-bold text-slate-700 mb-3">Forma de Pagamento</label>
                             <div className="grid grid-cols-2 gap-2">
-                                {['Pix', 'Cash', 'Credit', 'Split'].map(method => (
-                                    <button
-                                        key={method}
-                                        onClick={() => setPaymentMethod(method as any)}
-                                        className={`py-3 px-2 rounded-lg font-bold text-sm border-2 flex items-center justify-center transition-all ${paymentMethod === method ? 'border-orange-500 bg-orange-50 text-orange-700' : 'border-slate-100 bg-white text-slate-500 hover:border-slate-300'}`}
-                                    >
-                                        {method === 'Pix' && 'PIX'}
-                                        {method === 'Cash' && 'Dinheiro'}
-                                        {method === 'Credit' && 'Cartão'}
-                                        {method === 'Split' && 'Fiado / Prazo'}
+                                {(['Pix', 'Cash', 'Credit', 'Split'] as const).map(method => (
+                                    <button key={method} onClick={() => setPaymentMethod(method)} className={`py-3 px-2 rounded-lg font-bold text-sm border-2 flex items-center justify-center transition-all ${paymentMethod === method ? 'border-orange-500 bg-orange-50 text-orange-700' : 'border-slate-100 bg-white text-slate-500 hover:border-slate-300'}`}>
+                                        {method === 'Pix' && 'PIX'}{method === 'Cash' && 'Dinheiro'}{method === 'Credit' && 'Cartão'}{method === 'Split' && 'Fiado / Prazo'}
                                     </button>
                                 ))}
                             </div>
                         </div>
 
-                        <div className="bg-slate-800 text-white p-6 rounded-2xl shadow-lg mt-8">
-                            <div className="flex justify-between items-center mb-2 border-b border-slate-700 pb-2">
-                                <span className="text-slate-300 font-medium">Sua Comissão ({currentUser.role === 'WHOLESALE_SUPERVISOR' ? '5%' : '3%'}):</span>
-                                <span className="text-xl font-bold text-green-400">R$ {(cartTotal * (currentUser.role === 'WHOLESALE_SUPERVISOR' ? 0.05 : currentUser.role === 'WHOLESALE_REPRESENTATIVE' ? 0.03 : 0)).toFixed(2)}</span>
-                            </div>
-                            <div className="flex justify-between items-center mt-3">
-                                <span className="text-slate-300">Total do Pedido:</span>
+                        <div className="bg-slate-800 text-white p-5 rounded-2xl shadow-lg">
+                            {displayCommissionRate > 0 && (
+                                <div className="flex justify-between items-center mb-2 border-b border-slate-700 pb-2">
+                                    <span className="text-slate-300 font-medium text-sm">Comissão ({(displayCommissionRate * 100).toFixed(0)}%):</span>
+                                    <span className="text-lg font-bold text-green-400">R$ {(cartTotal * displayCommissionRate).toFixed(2)}</span>
+                                </div>
+                            )}
+                            <div className="flex justify-between items-center mt-2">
+                                <span className="text-slate-300 text-sm">Total do Pedido:</span>
                                 <span className="text-2xl font-black text-orange-400">R$ {cartTotal.toFixed(2)}</span>
                             </div>
-                            <p className="text-xs text-slate-400 mt-2 text-right italic">* O estoque e o recebimento serão conferidos pelo ADM.</p>
+                            <p className="text-xs text-slate-400 mt-2 text-right italic">* ADM confirma recebimento e estoque.</p>
                         </div>
 
-                        <button
-                            onClick={handleFinishSale}
-                            className="w-full bg-green-500 hover:bg-green-600 active:scale-95 text-white py-4 rounded-xl font-black text-lg shadow-xl shadow-green-900/20 transition-all flex items-center justify-center gap-2 mt-4"
-                        >
+                        <button onClick={handleFinishSale} className="w-full bg-green-500 hover:bg-green-600 active:scale-95 text-white py-4 rounded-xl font-black text-lg shadow-xl shadow-green-900/20 transition-all flex items-center justify-center gap-2">
                             <CheckCircle size={24} /> Confirmar Pedido
                         </button>
                     </div>
@@ -576,42 +632,129 @@ const WholesalePOS: React.FC<WholesalePOSProps> = ({
     };
 
     const renderHistory = () => {
-        // Calculate accrued totals for this user to display in the header of the history
-        let ownSalesTotal = 0;
-        let ownCommissionTotal = 0;
-        let teamSalesTotal = 0;
-        let teamCommissionTotal = 0;
+        // ADM view: commission summary per seller + all sales
+        if (isAdmin) {
+            const grandTotal = mySales.reduce((a, s) => a + s.total, 0);
+            const grandCommission = sellerSummary.reduce((a, s) => a + s.commission, 0);
 
+            return (
+                <div className="p-4 pb-24">
+                    <div className="flex justify-between items-center mb-4">
+                        <h2 className="text-xl font-black text-slate-800 flex items-center gap-2"><History size={22} /> Vendas Atacado</h2>
+                        <input type="month" value={monthFilter} onChange={e => setMonthFilter(e.target.value)}
+                            className="text-xs font-bold bg-white border border-slate-200 rounded-lg px-2 py-1 outline-none focus:ring-2 focus:ring-blue-500" />
+                    </div>
+
+                    {/* Grand totals */}
+                    <div className="grid grid-cols-2 gap-3 mb-4">
+                        <div className="bg-blue-900 text-white p-3 rounded-xl shadow">
+                            <p className="text-[10px] font-bold text-blue-300 uppercase tracking-widest">Total Vendido</p>
+                            <p className="text-2xl font-black text-white">R$ {grandTotal.toFixed(2)}</p>
+                            <p className="text-[10px] text-blue-300">{mySales.length} pedidos</p>
+                        </div>
+                        <div className="bg-green-700 text-white p-3 rounded-xl shadow">
+                            <p className="text-[10px] font-bold text-green-300 uppercase tracking-widest">Total Comissões</p>
+                            <p className="text-2xl font-black text-white">R$ {grandCommission.toFixed(2)}</p>
+                            <p className="text-[10px] text-green-300">{sellerSummary.length} vendedores</p>
+                        </div>
+                    </div>
+
+                    {/* Seller commission breakdown */}
+                    {sellerSummary.length > 0 && (
+                        <div className="bg-white rounded-xl shadow-sm border border-slate-100 mb-4 overflow-hidden">
+                            <div className="px-4 py-2 bg-slate-50 border-b border-slate-100">
+                                <p className="text-xs font-black text-slate-500 uppercase tracking-widest">Comissão por Vendedor</p>
+                            </div>
+                            {sellerSummary.map(s => {
+                                const roleLabel = s.role === 'WHOLESALE_SUPERVISOR' ? 'Supervisor (5%)' : s.role === 'WHOLESALE_REPRESENTATIVE' ? 'Representante (3%)' : 'ADM';
+                                return (
+                                    <div key={s.id} className="flex items-center justify-between px-4 py-3 border-b border-slate-50 last:border-0">
+                                        <div>
+                                            <p className="text-sm font-bold text-slate-800">{s.name}</p>
+                                            <p className="text-[10px] text-slate-400 font-medium">{roleLabel} · {s.count} pedidos · R$ {s.total.toFixed(2)}</p>
+                                        </div>
+                                        <span className="text-green-600 font-black text-sm">R$ {s.commission.toFixed(2)}</span>
+                                    </div>
+                                );
+                            })}
+                        </div>
+                    )}
+
+                    {/* All sales list */}
+                    {mySales.length === 0 ? (
+                        <div className="text-center text-slate-400 py-10">Nenhuma venda de atacado neste período.</div>
+                    ) : (
+                        <div className="space-y-3">
+                            {mySales.map(sale => {
+                                const rate = sale.sellerRole === 'WHOLESALE_SUPERVISOR' ? 0.05 : sale.sellerRole === 'WHOLESALE_REPRESENTATIVE' ? 0.03 : 0;
+                                const commission = sale.commissionAmount ?? (sale.total * rate);
+                                return (
+                                    <div key={sale.id} className="bg-white p-3 rounded-xl shadow-sm border border-slate-100">
+                                        <div className="flex justify-between items-start mb-1">
+                                            <div>
+                                                <h4 className="font-bold text-slate-800 text-sm">{sale.customerName}</h4>
+                                                <p className="text-[10px] text-slate-400">{sale.sellerName || 'ADM'} · {new Date(sale.createdAt || sale.date).toLocaleString('pt-BR')}</p>
+                                            </div>
+                                            <div className="text-right">
+                                                <p className="font-black text-slate-800 text-sm">R$ {sale.total.toFixed(2)}</p>
+                                                {commission > 0 && <p className="text-[10px] text-green-600 font-bold">Comissão: R$ {commission.toFixed(2)}</p>}
+                                            </div>
+                                        </div>
+                                        <div className="flex justify-between items-center mt-2">
+                                            <div className="flex gap-1 flex-wrap">
+                                                <span className={`text-[9px] font-black px-1.5 py-0.5 rounded uppercase ${sale.status === 'Pending' ? 'bg-orange-100 text-orange-700' : sale.status === 'Completed' ? 'bg-green-100 text-green-700' : 'bg-blue-100 text-blue-700'}`}>
+                                                    {sale.status === 'Pending' ? 'Pendente' : sale.status === 'Completed' ? 'Concluído' : sale.status}
+                                                </span>
+                                                <span className="text-[9px] bg-slate-100 text-slate-600 px-1.5 py-0.5 rounded font-medium uppercase">{sale.paymentMethod}</span>
+                                            </div>
+                                            <div className="flex gap-1">
+                                                <button onClick={() => handlePrint(sale)} className="p-1 px-2 text-xs bg-blue-50 hover:bg-blue-100 text-blue-600 rounded flex items-center gap-1 font-bold border border-blue-100">
+                                                    <Printer size={11} />
+                                                </button>
+                                                {onUpdateSale && (
+                                                    <button onClick={() => { setEditingSale({ ...sale }); setShowEditSaleModal(true); }} className="p-1 px-2 text-xs bg-slate-100 hover:bg-slate-200 text-slate-600 rounded flex items-center gap-1 font-bold">
+                                                        <Edit size={11} /> Editar
+                                                    </button>
+                                                )}
+                                                {onDeleteSale && (
+                                                    <button onClick={() => onDeleteSale(sale.id)} className="p-1 px-2 text-xs bg-red-50 hover:bg-red-100 text-red-600 rounded font-bold">
+                                                        <Trash2 size={11} />
+                                                    </button>
+                                                )}
+                                            </div>
+                                        </div>
+                                    </div>
+                                );
+                            })}
+                        </div>
+                    )}
+                </div>
+            );
+        }
+
+        // Seller/Supervisor view: own summary + filtered sales
+        let ownCommissionTotal = 0;
+        let teamCommissionTotal = 0;
         mySales.forEach(s => {
             if (s.sellerId === currentUser.id) {
-                ownSalesTotal += s.total;
                 ownCommissionTotal += s.total * (currentUser.role === 'WHOLESALE_SUPERVISOR' ? 0.05 : 0.03);
             } else if (currentUser.role === 'WHOLESALE_SUPERVISOR' && s.sellerRole === 'WHOLESALE_REPRESENTATIVE') {
-                teamSalesTotal += s.total;
-                teamCommissionTotal += s.total * 0.02; // Supervisor earns 2% on rep's sales
+                teamCommissionTotal += s.total * 0.02;
             }
         });
-
         const totalCommission = ownCommissionTotal + teamCommissionTotal;
 
         return (
             <div className="p-4 pb-24">
                 <div className="flex justify-between items-center mb-6">
-                    <h2 className="text-2xl font-black text-slate-800 flex items-center gap-2">
-                        <History /> Minhas Vendas
-                    </h2>
-                    <input
-                        type="month"
-                        value={monthFilter}
-                        onChange={(e) => setMonthFilter(e.target.value)}
-                        className="text-xs font-bold bg-white border border-slate-200 rounded-lg px-2 py-1 outline-none focus:ring-2 focus:ring-blue-500"
-                    />
+                    <h2 className="text-2xl font-black text-slate-800 flex items-center gap-2"><History /> Minhas Vendas</h2>
+                    <input type="month" value={monthFilter} onChange={e => setMonthFilter(e.target.value)}
+                        className="text-xs font-bold bg-white border border-slate-200 rounded-lg px-2 py-1 outline-none focus:ring-2 focus:ring-blue-500" />
                 </div>
 
                 <div className="bg-green-600 text-white p-4 rounded-xl shadow-lg mb-6">
                     <p className="text-sm font-medium text-green-100 uppercase tracking-widest mb-1">Total de Comissões</p>
                     <p className="text-3xl font-black">R$ {totalCommission.toFixed(2)}</p>
-
                     {currentUser.role === 'WHOLESALE_SUPERVISOR' && teamCommissionTotal > 0 && (
                         <div className="mt-4 pt-3 border-t border-green-500/50 flex justify-between text-xs font-bold text-green-100">
                             <span>Próprias (5%): R$ {ownCommissionTotal.toFixed(2)}</span>
@@ -621,30 +764,21 @@ const WholesalePOS: React.FC<WholesalePOSProps> = ({
                 </div>
 
                 {mySales.length === 0 ? (
-                    <div className="text-center text-slate-500 py-10">
-                        Nenhuma venda encontrada.
-                    </div>
+                    <div className="text-center text-slate-500 py-10">Nenhuma venda encontrada.</div>
                 ) : (
                     <div className="space-y-4">
                         {mySales.map(sale => {
                             const isMySale = sale.sellerId === currentUser.id;
                             const saleName = isMySale ? 'Sua Venda' : `Vendedor: ${sale.sellerName?.split(' ')[0] || 'Vendedor'}`;
                             const saleCommission = isMySale ? sale.total * (currentUser.role === 'WHOLESALE_SUPERVISOR' ? 0.05 : 0.03) : sale.total * 0.02;
-
                             return (
-                                <div key={sale.id} className="bg-white p-4 rounded-xl shadow-sm border border-slate-100 relative">
+                                <div key={sale.id} className="bg-white p-4 rounded-xl shadow-sm border border-slate-100">
                                     <div className="flex justify-between items-start mb-2">
                                         <div>
                                             <div className="flex items-center gap-2 mb-1">
                                                 <h4 className="font-bold text-slate-800">{sale.customerName}</h4>
-                                                <span className={`text-[9px] font-black px-1.5 py-0.5 rounded uppercase ${sale.status === 'Pending' ? 'bg-orange-100 text-orange-700' :
-                                                    sale.status === 'Completed' ? 'bg-green-100 text-green-700' :
-                                                        sale.status === 'Finalizado pela Fábrica' ? 'bg-blue-100 text-blue-700' :
-                                                            'bg-slate-100 text-slate-600'
-                                                    }`}>
-                                                    {sale.status === 'Pending' ? 'Pendente' :
-                                                        sale.status === 'Completed' ? 'Concluído' :
-                                                            sale.status === 'Finalizado pela Fábrica' ? 'Finalizado Fábrica' : sale.status}
+                                                <span className={`text-[9px] font-black px-1.5 py-0.5 rounded uppercase ${sale.status === 'Pending' ? 'bg-orange-100 text-orange-700' : sale.status === 'Completed' ? 'bg-green-100 text-green-700' : 'bg-blue-100 text-blue-700'}`}>
+                                                    {sale.status === 'Pending' ? 'Pendente' : sale.status === 'Completed' ? 'Concluído' : sale.status === 'Finalizado pela Fábrica' ? 'Fin. Fábrica' : sale.status}
                                                 </span>
                                             </div>
                                             <p className="text-xs text-slate-500">{new Date(sale.createdAt || sale.date).toLocaleString('pt-BR')}</p>
@@ -655,36 +789,14 @@ const WholesalePOS: React.FC<WholesalePOSProps> = ({
                                         </div>
                                     </div>
                                     <div className="flex gap-2 mt-3 items-center justify-between">
-                                        <div className="flex gap-2">
-                                            <span className={`text-[10px] uppercase font-bold px-2 py-1 rounded-md ${isMySale ? 'bg-blue-100 text-blue-700' : 'bg-purple-100 text-purple-700'}`}>
-                                                {saleName}
-                                            </span>
+                                        <div className="flex gap-1 flex-wrap">
+                                            <span className={`text-[10px] uppercase font-bold px-2 py-1 rounded-md ${isMySale ? 'bg-blue-100 text-blue-700' : 'bg-purple-100 text-purple-700'}`}>{saleName}</span>
                                             <span className="text-[10px] bg-slate-100 text-slate-600 px-2 py-1 rounded-md font-medium uppercase">{sale.paymentMethod}</span>
                                         </div>
-                                        {/* Edit / Delete Buttons */}
-                                        <div className="flex gap-2">
-                                            <button
-                                                onClick={() => handlePrint(sale)}
-                                                className="p-1 px-2 text-xs bg-blue-50 hover:bg-blue-100 text-blue-600 rounded flex items-center gap-1 font-bold transition-all border border-blue-100"
-                                            >
-                                                <Printer size={12} /> Imprimir
-                                            </button>
-                                            {onUpdateSale && (
-                                                <button
-                                                    onClick={() => { setEditingSale({ ...sale }); setShowEditSaleModal(true); }}
-                                                    className="p-1 px-2 text-xs bg-slate-100 hover:bg-slate-200 text-slate-600 rounded flex items-center gap-1 font-bold transition-all"
-                                                >
-                                                    <Edit size={12} /> Editar
-                                                </button>
-                                            )}
-                                            {onDeleteSale && (
-                                                <button
-                                                    onClick={() => onDeleteSale(sale.id)}
-                                                    className="p-1 px-2 text-xs bg-red-50 hover:bg-red-100 text-red-600 rounded flex items-center gap-1 font-bold transition-all"
-                                                >
-                                                    <Trash2 size={12} /> Excluir
-                                                </button>
-                                            )}
+                                        <div className="flex gap-1">
+                                            <button onClick={() => handlePrint(sale)} className="p-1 px-2 text-xs bg-blue-50 hover:bg-blue-100 text-blue-600 rounded flex items-center gap-1 font-bold border border-blue-100"><Printer size={12} /> Imprimir</button>
+                                            {onUpdateSale && <button onClick={() => { setEditingSale({ ...sale }); setShowEditSaleModal(true); }} className="p-1 px-2 text-xs bg-slate-100 hover:bg-slate-200 text-slate-600 rounded flex items-center gap-1 font-bold"><Edit size={12} /> Editar</button>}
+                                            {onDeleteSale && <button onClick={() => onDeleteSale(sale.id)} className="p-1 px-2 text-xs bg-red-50 hover:bg-red-100 text-red-600 rounded flex items-center gap-1 font-bold"><Trash2 size={12} /></button>}
                                         </div>
                                     </div>
                                 </div>
