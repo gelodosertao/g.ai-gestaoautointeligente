@@ -120,6 +120,10 @@ export interface Sale {
   createdAt?: string; // ISO Date String for proper sorting/time display
   deliveryFee?: number; // Taxa de entrega
   source?: string; // Origem da venda (ex: 'OnlineMenu')
+  sellerId?: string; // ID of the user who made the sale
+  sellerName?: string; // Name of the user who made the sale
+  sellerRole?: string; // Role of the user who made the sale
+  commissionAmount?: number; // Calculated commission at the time of sale
 }
 
 export interface SaleItem {
@@ -146,7 +150,7 @@ export interface FinancialRecord {
   paymentMethod?: 'Pix' | 'Credit' | 'Debit' | 'Cash';
 }
 
-export type Role = 'ADMIN' | 'OPERATOR' | 'FACTORY';
+export type Role = 'ADMIN' | 'OPERATOR' | 'FACTORY' | 'WHOLESALE_SUPERVISOR' | 'WHOLESALE_REPRESENTATIVE';
 
 export interface User {
   id: string;
@@ -158,7 +162,7 @@ export interface User {
   allowedModules?: string[]; // IDs of modules the user can access
 }
 
-export type ViewState = 'DASHBOARD' | 'INVENTORY' | 'SALES' | 'FINANCIAL' | 'CASH_CLOSING' | 'AI_INSIGHTS' | 'SETTINGS' | 'CUSTOMERS' | 'PRICING' | 'ONLINE_MENU' | 'MENU_CONFIG' | 'PRODUCTION' | 'ORDER_CENTER' | 'REPORTS';
+export type ViewState = 'DASHBOARD' | 'INVENTORY' | 'SALES' | 'FINANCIAL' | 'CASH_CLOSING' | 'AI_INSIGHTS' | 'SETTINGS' | 'CUSTOMERS' | 'PRICING' | 'ONLINE_MENU' | 'MENU_CONFIG' | 'PRODUCTION' | 'ORDER_CENTER' | 'REPORTS' | 'WHOLESALE_POS';
 
 export interface Order {
   id: string;

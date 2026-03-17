@@ -21,6 +21,8 @@ const MenuConfig = React.lazy(() => import('./components/MenuConfig'));
 const Production = React.lazy(() => import('./components/Production'));
 const OrderCenter = React.lazy(() => import('./components/OrderCenter'));
 const Reports = React.lazy(() => import('./components/Reports'));
+// Lazy loaded WholesalePOS
+const WholesalePOS = React.lazy(() => import('./components/WholesalePOS'));
 
 const App: React.FC = () => {
   const [currentUser, setCurrentUser] = useState<User | null>(null);
@@ -61,6 +63,7 @@ const App: React.FC = () => {
           } else {
             if (user.role === 'FACTORY') initialView = 'PRODUCTION';
             else if (user.role === 'OPERATOR') initialView = 'SALES';
+            else if (user.role === 'WHOLESALE_SUPERVISOR' || user.role === 'WHOLESALE_REPRESENTATIVE') initialView = 'WHOLESALE_POS';
           }
           setCurrentView(initialView);
         }
@@ -410,6 +413,7 @@ const App: React.FC = () => {
     } else {
       if (user.role === 'FACTORY') initialView = 'PRODUCTION';
       else if (user.role === 'OPERATOR') initialView = 'SALES';
+      else if (user.role === 'WHOLESALE_SUPERVISOR' || user.role === 'WHOLESALE_REPRESENTATIVE') initialView = 'WHOLESALE_POS';
     }
     setCurrentView(initialView);
   };
@@ -537,6 +541,26 @@ const App: React.FC = () => {
     return (
       <Suspense fallback={<div className="h-screen w-screen flex items-center justify-center bg-slate-50"><Loader2 size={48} className="animate-spin text-orange-500" /></div>}>
         <OnlineMenu />
+      </Suspense>
+    );
+  }
+
+  // If viewing Wholesale POS, use full-screen layout
+  if (currentUser && currentView === 'WHOLESALE_POS') {
+    return (
+      <Suspense fallback={<div className="h-screen w-screen flex items-center justify-center bg-slate-50"><Loader2 size={48} className="animate-spin text-orange-500" /></div>}>
+        <WholesalePOS
+          products={products}
+          sales={sales}
+          customers={customers}
+          currentUser={currentUser}
+          onAddSale={handleAddSale}
+          onAddCustomer={handleAddCustomer}
+          onLogout={handleLogout}
+          onUpdateSale={handleUpdateSale}
+          onDeleteSale={handleDeleteSale}
+          onBack={currentUser.role === 'ADMIN' || currentUser.role === 'WHOLESALE_SUPERVISOR' ? () => setCurrentView('DASHBOARD') : undefined}
+        />
       </Suspense>
     );
   }
