@@ -27,6 +27,7 @@ export const ALL_MENU_ITEMS = [
   { id: 'CASH_CLOSING', label: 'Fechar Caixa', icon: Lock, roles: ['OPERATOR'] },
   { id: 'REPORTS', label: 'Relatórios', icon: PieChart, roles: ['ADMIN'] },
   { id: 'MENU_CONFIG', label: 'Site / Cardápio', icon: Globe, roles: ['ADMIN'] },
+  { id: 'WHOLESALE_POS', label: 'PDV Atacado', icon: ShoppingCart, roles: ['ADMIN', 'WHOLESALE_SUPERVISOR', 'WHOLESALE_REPRESENTATIVE'] },
 ];
 
 const AppSidebar: React.FC<AppSidebarProps> = ({ currentView, setView, currentUser, onLogout, isCollapsed, toggleSidebar, isMobileMenuOpen, closeMobileMenu, pendingOrdersCount }) => {

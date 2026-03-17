@@ -31,7 +31,7 @@ const Login: React.FC<LoginProps> = ({ onLogin, onOpenMenu }) => {
     setError('');
 
     try {
-      const user = await dbUsers.login(email, password);
+      const user = await dbUsers.login(email.trim().toLowerCase(), password);
       onLogin(user);
     } catch (err: any) {
       console.error("Login error:", err);
@@ -51,7 +51,7 @@ const Login: React.FC<LoginProps> = ({ onLogin, onOpenMenu }) => {
 
       await dbUsers.register({
         name: regName,
-        email: regEmail,
+        email: regEmail.trim().toLowerCase(),
         password: regPassword,
         role: regRole
       });
