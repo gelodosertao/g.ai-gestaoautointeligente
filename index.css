@@ -127,23 +127,24 @@ body {
 
   /* Only show the receipt area */
   #printable-receipt,
-  #printable-receipt * {
+  #printable-receipt *,
+  #wholesale-receipt,
+  #wholesale-receipt * {
     visibility: visible;
   }
 
   /* Position the receipt at the top-left */
-  #printable-receipt {
+  #printable-receipt,
+  #wholesale-receipt {
     position: absolute;
     left: 0;
     top: 0;
     width: 58mm;
     /* Standard thermal paper width */
-    padding: 0;
+    padding: 2mm;
     margin: 0;
-    font-family: 'Courier New', Courier, monospace;
-    /* Monospaced looks better on receipts */
-    color: black;
-    background: white;
+    color: black !important;
+    background: white !important;
   }
 
   /* Remove browser headers/footers if possible (user setting dependent, but this helps) */
