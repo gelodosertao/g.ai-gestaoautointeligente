@@ -288,8 +288,19 @@ const WholesalePOS: React.FC<WholesalePOSProps> = ({
                 canvas.toBlob(async (blob) => {
                     if (!blob) return;
 
-                    const fileName = `pedido-${saleToPrint.id.substring(0, 8)}.png`;
-                    const file = new File([blob], fileName, { type: 'image/png' });
+                    const fileName = `pedido-${saleToPrint.id.substring(0, 8)}.jpg`;
+                    const file = new File([blob], fileName, { type: 'image/jpeg' });
+
+                    const downloadFallback = () => {
+                        const dataUrl = URL.createObjectURL(blob);
+                        const a = document.createElement('a');
+                        a.href = dataUrl;
+                        a.download = fileName;
+                        document.body.appendChild(a);
+                        a.click();
+                        document.body.removeChild(a);
+                        setTimeout(() => URL.revokeObjectURL(dataUrl), 100);
+                    };
 
                     // Compartilhamento nativa (maquininhas/celulares)
                     if (navigator.canShare && navigator.canShare({ files: [file] })) {
@@ -300,20 +311,13 @@ const WholesalePOS: React.FC<WholesalePOSProps> = ({
                                 text: 'Cupom de Pedido Gelo do Sertão',
                             });
                         } catch (err) {
-                            console.log('Share cancelado', err);
+                            console.log('Share cancelado ou falhou, tentando download...', err);
+                            downloadFallback();
                         }
                     } else {
-                        // FALLBACK: Download convencional
-                        const dataUrl = URL.createObjectURL(blob);
-                        const a = document.createElement('a');
-                        a.href = dataUrl;
-                        a.download = fileName;
-                        document.body.appendChild(a);
-                        a.click();
-                        document.body.removeChild(a);
-                        setTimeout(() => URL.revokeObjectURL(dataUrl), 100);
+                        downloadFallback();
                     }
-                }, 'image/png');
+                }, 'image/jpeg', 1.0);
 
             } catch (e) {
                 console.error('Erro na impressão', e);
