@@ -288,8 +288,8 @@ const WholesalePOS: React.FC<WholesalePOSProps> = ({
                 canvas.toBlob(async (blob) => {
                     if (!blob) return;
 
-                    const fileName = `pedido-${saleToPrint.id.substring(0, 8)}.png`;
-                    const file = new File([blob], fileName, { type: 'image/png' });
+                    const fileName = `pedido-${saleToPrint.id.substring(0, 8)}.jpg`;
+                    const file = new File([blob], fileName, { type: 'image/jpeg' });
 
                     // Compartilhamento nativa (maquininhas/celulares)
                     if (navigator.canShare && navigator.canShare({ files: [file] })) {
@@ -313,7 +313,7 @@ const WholesalePOS: React.FC<WholesalePOSProps> = ({
                         document.body.removeChild(a);
                         setTimeout(() => URL.revokeObjectURL(dataUrl), 100);
                     }
-                }, 'image/png');
+                }, 'image/jpeg', 0.95);
 
             } catch (e) {
                 console.error('Erro na impressão', e);
