@@ -134,7 +134,12 @@ export const dbUsers = {
     try {
       const stored = localStorage.getItem('app_user');
       if (stored) {
-        return JSON.parse(stored);
+        const user = JSON.parse(stored);
+        // Garante que o tenantId nunca seja undefined/null para evitar dados zerados
+        if (user && !user.tenantId) {
+          user.tenantId = '00000000-0000-0000-0000-000000000000';
+        }
+        return user;
       }
     } catch (e) {
       console.error("Erro ao ler usuário do cache:", e);
@@ -153,7 +158,7 @@ export const dbUsers = {
       email: row.email,
       role: row.role as Role,
       avatarInitials: row.avatar_initials,
-      tenantId: row.tenant_id,
+      tenantId: row.tenant_id || '00000000-0000-0000-0000-000000000000',
       allowedModules: row.allowed_modules
     }));
   },

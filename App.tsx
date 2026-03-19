@@ -138,14 +138,15 @@ const App: React.FC = () => {
   const loadDataFromCloud = async () => {
     setIsLoading(true);
     setDbError(null);
+    const tenantId = currentUser?.tenantId || '00000000-0000-0000-0000-000000000000';
     try {
       // Parallel fetch for speed
       const [p, s, f, c, cc] = await Promise.all([
-        dbProducts.getAll(currentUser.tenantId),
-        dbSales.getAll(currentUser.tenantId),
-        dbFinancials.getAll(currentUser.tenantId),
-        dbCustomers.getAll(currentUser.tenantId),
-        dbCashClosings.getAll(currentUser.tenantId)
+        dbProducts.getAll(tenantId),
+        dbSales.getAll(tenantId),
+        dbFinancials.getAll(tenantId),
+        dbCustomers.getAll(tenantId),
+        dbCashClosings.getAll(tenantId)
       ]);
 
       setProducts(p.length > 0 ? p : []);
