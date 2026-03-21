@@ -38,6 +38,7 @@ const WholesalePOS: React.FC<WholesalePOSProps> = ({
     // Cart State
     const [cart, setCart] = useState<{ product: Product, quantity: number }[]>([]);
     const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
+    const [customerSearchQuery, setCustomerSearchQuery] = useState('');
 
     // Checkout State
     const [isCheckingOut, setIsCheckingOut] = useState(false);
@@ -200,6 +201,7 @@ const WholesalePOS: React.FC<WholesalePOSProps> = ({
         try {
             await onAddCustomer(customerToSave);
             setSelectedCustomer(customerToSave);
+            setCustomerSearchQuery(customerToSave.name);
             setShowAddCustomerModal(false);
             setShowInlineCustomer(false); // close inline panel too
             setNewCustomer({ name: '', cpfCnpj: '', phone: '', address: '', city: '', state: 'BA', segment: '' });
@@ -256,6 +258,7 @@ const WholesalePOS: React.FC<WholesalePOSProps> = ({
             setLastCompletedSale(newSale);
             setCart([]);
             setSelectedCustomer(null);
+            setCustomerSearchQuery('');
             setIsCheckingOut(false);
             setShowSuccessModal(true);
         } catch (e) {
@@ -545,10 +548,42 @@ const WholesalePOS: React.FC<WholesalePOSProps> = ({
                                 </div>
                             ) : (
                                 <>
-                                    <select className="w-full p-3 bg-slate-50 border border-slate-200 rounded-lg outline-none focus:border-orange-500 font-medium text-slate-700 mb-2" value={selectedCustomer?.id || ''} onChange={e => { const c = myCustomers.find(cus => cus.id === e.target.value); setSelectedCustomer(c || null); }}>
-                                        <option value="">-- Selecione o Cliente --</option>
-                                        {myCustomers.map(c => <option key={c.id} value={c.id}>{c.name} {c.city ? `(${c.city})` : ''}</option>)}
-                                    </select>
+                                    <div className="relative mb-2">
+                                        <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                                        <input
+                                            type="text"
+                                            placeholder="Buscar cliente por nome..."
+                                            className="w-full pl-9 pr-3 py-3 bg-slate-50 border border-slate-200 rounded-lg outline-none focus:border-orange-500 font-medium text-slate-700"
+                                            value={customerSearchQuery}
+                                            onChange={(e) => {
+                                                setCustomerSearchQuery(e.target.value);
+                                                setSelectedCustomer(null); // Reset selection
+                                            }}
+                                        />
+                                    </div>
+
+                                    {customerSearchQuery.length > 0 && !selectedCustomer && (
+                                        <div className="max-h-48 overflow-y-auto bg-white border border-slate-200 rounded-lg shadow-sm mb-2 custom-scrollbar">
+                                            {myCustomers.filter(c => c.name.toLowerCase().includes(customerSearchQuery.toLowerCase())).length === 0 ? (
+                                                <div className="p-3 text-sm text-slate-500 text-center">Nenhum cliente encontrado.</div>
+                                            ) : (
+                                                myCustomers.filter(c => c.name.toLowerCase().includes(customerSearchQuery.toLowerCase())).map(c => (
+                                                    <button
+                                                        key={c.id}
+                                                        onClick={() => {
+                                                            setSelectedCustomer(c);
+                                                            setCustomerSearchQuery(c.name);
+                                                        }}
+                                                        className="w-full text-left p-3 border-b border-slate-100 hover:bg-slate-50 flex flex-col last:border-0"
+                                                    >
+                                                        <span className="font-bold text-slate-800 text-sm">{c.name}</span>
+                                                        <span className="text-xs text-slate-500">{c.city || c.phone ? `${c.city || ''} ${c.phone ? '• ' + c.phone : ''}` : 'Sem mais informações'}</span>
+                                                    </button>
+                                                ))
+                                            )}
+                                        </div>
+                                    )}
+
                                     {selectedCustomer && (
                                         <div className="mt-2 p-2 bg-blue-50 rounded-lg border border-blue-100 flex items-center gap-2">
                                             <div className="bg-blue-600 text-white p-1.5 rounded-full"><UserIcon size={14} /></div>
@@ -556,7 +591,7 @@ const WholesalePOS: React.FC<WholesalePOSProps> = ({
                                                 <p className="text-xs font-bold text-blue-900">{selectedCustomer.name}</p>
                                                 <p className="text-[10px] text-blue-600 font-medium">{selectedCustomer.city || 'Cidade não informada'} • {selectedCustomer.phone || 'Sem telefone'}</p>
                                             </div>
-                                            <button onClick={() => setSelectedCustomer(null)} className="text-blue-400 hover:text-blue-600"><X size={16} /></button>
+                                            <button onClick={() => { setSelectedCustomer(null); setCustomerSearchQuery(''); }} className="text-blue-400 hover:text-blue-600"><X size={16} /></button>
                                         </div>
                                     )}
                                 </>
