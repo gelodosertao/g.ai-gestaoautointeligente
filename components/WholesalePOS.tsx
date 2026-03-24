@@ -43,6 +43,7 @@ const WholesalePOS: React.FC<WholesalePOSProps> = ({
     // Checkout State
     const [isCheckingOut, setIsCheckingOut] = useState(false);
     const [paymentMethod, setPaymentMethod] = useState<'Pix' | 'Credit' | 'Debit' | 'Cash' | 'Split'>('Pix');
+    const [saleDate, setSaleDate] = useState(new Date().toISOString().split('T')[0]);
     const [adminDiscount, setAdminDiscount] = useState<number>(0);
     // ADM can assign sale to a seller
     const [assignedSellerId, setAssignedSellerId] = useState<string>('');
@@ -92,7 +93,7 @@ const WholesalePOS: React.FC<WholesalePOSProps> = ({
     const mySales = useMemo(() => {
         let relevantSales = sales.filter(s => s.source === 'WHOLESALE_POS');
         if (monthFilter) {
-            relevantSales = relevantSales.filter(s => (s.createdAt || s.date).startsWith(monthFilter));
+            relevantSales = relevantSales.filter(s => (s.date || s.createdAt).startsWith(monthFilter));
         }
         if (isAdmin) return relevantSales.sort((a, b) => (b.createdAt || '').localeCompare(a.createdAt || ''));
         if (currentUser.role === 'WHOLESALE_SUPERVISOR') {
@@ -238,7 +239,7 @@ const WholesalePOS: React.FC<WholesalePOSProps> = ({
 
         const newSale: Sale = {
             id: crypto.randomUUID(),
-            date: new Date().toISOString().split('T')[0],
+            date: saleDate,
             createdAt: new Date().toISOString(),
             customerName: selectedCustomer.name,
             total: finalTotal,
@@ -611,6 +612,17 @@ const WholesalePOS: React.FC<WholesalePOSProps> = ({
                                 </select>
                             </div>
                         )}
+
+                        {/* Sale Date Selector */}
+                        <div className="bg-white p-4 rounded-xl shadow-sm border border-slate-100 mb-4">
+                            <label className="block text-sm font-bold text-slate-700 mb-2">Data da Venda</label>
+                            <input
+                                type="date"
+                                className="w-full px-3 py-3 bg-slate-50 border border-slate-200 rounded-lg outline-none focus:border-orange-500 font-medium text-slate-700"
+                                value={saleDate}
+                                onChange={e => setSaleDate(e.target.value)}
+                            />
+                        </div>
 
                         {/* Discount (Admin only) */}
                         {isAdmin && (

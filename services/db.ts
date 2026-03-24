@@ -176,25 +176,20 @@ export const dbUsers = {
   },
 
   async updatePassword(userId: string, newPassword: string): Promise<void> {
-    // Atualiza a senha no Supabase Auth SE O USUÁRIO FOR O ATUAL LOGADO!
-    // Nota: O admin só poderia mudar a senha de um funcionário usando uma Edge Function com o SDK Service Role,
-    // Ou usando a API de admin: await registerClient.auth.admin.updateUserById(userId, {password: ...}) 
-    // Como a API de admin requer a SERVICE ROLE KEY que não temos no frontend de forma segura, 
-    // aqui nós assumiremos que isso atualiza a session atual ou a tabela app_users primária (para migrações futuras).
+    const { error } = await supabase.rpc('update_user_password', {
+      target_user_id: userId,
+      new_password: newPassword
+    });
 
-    // Atualização ingênua (fallback):
-    await supabase.from('app_users').update({ password: newPassword }).eq('id', userId);
-
-    // Se o usuário solicitante é o logado, atualize seu Auth também:
-    const { data: { session } } = await supabase.auth.getSession();
-    if (session?.user.id === userId) {
-      await supabase.auth.updateUser({ password: newPassword });
-    }
+    if (error) throw new Error(error.message || 'Falha ao atualizar a senha no servidor.');
   },
 
   async delete(userId: string): Promise<void> {
-    const { error } = await supabase.from('app_users').delete().eq('id', userId);
-    if (error) throw error;
+    const { error } = await supabase.rpc('delete_auth_user', {
+      target_user_id: userId
+    });
+
+    if (error) throw new Error(error.message || 'Falha ao excluir o usuário do servidor.');
   }
 };
 
