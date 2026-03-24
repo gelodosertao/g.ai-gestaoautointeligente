@@ -43,6 +43,7 @@ const WholesalePOS: React.FC<WholesalePOSProps> = ({
     // Checkout State
     const [isCheckingOut, setIsCheckingOut] = useState(false);
     const [paymentMethod, setPaymentMethod] = useState<'Pix' | 'Credit' | 'Debit' | 'Cash' | 'Split'>('Pix');
+    const [adminDiscount, setAdminDiscount] = useState<number>(0);
     // ADM can assign sale to a seller
     const [assignedSellerId, setAssignedSellerId] = useState<string>('');
 
@@ -232,14 +233,15 @@ const WholesalePOS: React.FC<WholesalePOSProps> = ({
         }
 
         const commissionRate = effectiveSellerRole === 'WHOLESALE_SUPERVISOR' ? 0.05 : effectiveSellerRole === 'WHOLESALE_REPRESENTATIVE' ? 0.03 : 0;
-        const commissionAmount = cartTotal * commissionRate;
+        const finalTotal = Math.max(cartTotal - (adminDiscount || 0), 0);
+        const commissionAmount = finalTotal * commissionRate;
 
         const newSale: Sale = {
             id: crypto.randomUUID(),
             date: new Date().toISOString().split('T')[0],
             createdAt: new Date().toISOString(),
             customerName: selectedCustomer.name,
-            total: cartTotal,
+            total: finalTotal,
             items: saleItems,
             branch: Branch.MATRIZ,
             status: 'Pending',
@@ -260,6 +262,7 @@ const WholesalePOS: React.FC<WholesalePOSProps> = ({
             setSelectedCustomer(null);
             setCustomerSearchQuery('');
             setIsCheckingOut(false);
+            setAdminDiscount(0);
             setShowSuccessModal(true);
         } catch (e) {
             console.error(e);
@@ -609,28 +612,50 @@ const WholesalePOS: React.FC<WholesalePOSProps> = ({
                             </div>
                         )}
 
+                        {/* Discount (Admin only) */}
+                        {isAdmin && (
+                            <div className="bg-white p-4 rounded-xl shadow-sm border border-slate-100 mb-4">
+                                <label className="block text-sm font-bold text-slate-700 mb-2">Desconto (R$)</label>
+                                <input
+                                    type="number"
+                                    min="0"
+                                    step="0.01"
+                                    className="w-full px-3 py-3 bg-slate-50 border border-slate-200 rounded-lg outline-none focus:border-orange-500 font-medium text-slate-700"
+                                    value={adminDiscount || ''}
+                                    onChange={e => setAdminDiscount(Number(e.target.value) || 0)}
+                                    placeholder="Valor do desconto"
+                                />
+                            </div>
+                        )}
+
                         {/* Payment Method */}
                         <div className="bg-white p-4 rounded-xl shadow-sm border border-slate-100">
                             <label className="block text-sm font-bold text-slate-700 mb-3">Forma de Pagamento</label>
                             <div className="grid grid-cols-2 gap-2">
-                                {(['Pix', 'Cash', 'Credit', 'Split'] as const).map(method => (
-                                    <button key={method} onClick={() => setPaymentMethod(method)} className={`py-3 px-2 rounded-lg font-bold text-sm border-2 flex items-center justify-center transition-all ${paymentMethod === method ? 'border-orange-500 bg-orange-50 text-orange-700' : 'border-slate-100 bg-white text-slate-500 hover:border-slate-300'}`}>
-                                        {method === 'Pix' && 'PIX'}{method === 'Cash' && 'Dinheiro'}{method === 'Credit' && 'Cartão'}{method === 'Split' && 'Fiado / Prazo'}
+                                {(isAdmin ? ['Pix', 'Cash', 'Credit', 'Debit', 'Split'] : ['Pix', 'Cash', 'Credit', 'Debit']).map(method => (
+                                    <button key={method} onClick={() => setPaymentMethod(method as 'Pix' | 'Credit' | 'Debit' | 'Cash' | 'Split')} className={`py-3 px-2 rounded-lg font-bold text-sm border-2 flex items-center justify-center transition-all ${paymentMethod === method ? 'border-orange-500 bg-orange-50 text-orange-700' : 'border-slate-100 bg-white text-slate-500 hover:border-slate-300'}`}>
+                                        {method === 'Pix' && 'PIX'}{method === 'Cash' && 'Dinheiro'}{method === 'Credit' && 'Crédito'}{method === 'Debit' && 'Débito'}{method === 'Split' && 'Fiado / Prazo'}
                                     </button>
                                 ))}
                             </div>
                         </div>
 
                         <div className="bg-slate-800 text-white p-5 rounded-2xl shadow-lg">
+                            {isAdmin && adminDiscount > 0 && (
+                                <div className="flex justify-between items-center mb-2 border-b border-slate-700 pb-2 text-orange-300">
+                                    <span className="font-medium text-sm">Desconto aplicado:</span>
+                                    <span className="font-bold">- R$ {adminDiscount.toFixed(2)}</span>
+                                </div>
+                            )}
                             {displayCommissionRate > 0 && (
                                 <div className="flex justify-between items-center mb-2 border-b border-slate-700 pb-2">
                                     <span className="text-slate-300 font-medium text-sm">Comissão ({(displayCommissionRate * 100).toFixed(0)}%):</span>
-                                    <span className="text-lg font-bold text-green-400">R$ {(cartTotal * displayCommissionRate).toFixed(2)}</span>
+                                    <span className="text-lg font-bold text-green-400">R$ {(Math.max(cartTotal - adminDiscount, 0) * displayCommissionRate).toFixed(2)}</span>
                                 </div>
                             )}
                             <div className="flex justify-between items-center mt-2">
                                 <span className="text-slate-300 text-sm">Total do Pedido:</span>
-                                <span className="text-2xl font-black text-orange-400">R$ {cartTotal.toFixed(2)}</span>
+                                <span className="text-2xl font-black text-orange-400">R$ {Math.max(cartTotal - adminDiscount, 0).toFixed(2)}</span>
                             </div>
                             <p className="text-xs text-slate-400 mt-2 text-right italic">* ADM confirma recebimento e estoque.</p>
                         </div>
@@ -766,7 +791,9 @@ const WholesalePOS: React.FC<WholesalePOSProps> = ({
                                                 <span className={`text-[9px] font-black px-1.5 py-0.5 rounded uppercase ${sale.status === 'Pending' ? 'bg-orange-100 text-orange-700' : sale.status === 'Completed' ? 'bg-green-100 text-green-700' : 'bg-blue-100 text-blue-700'}`}>
                                                     {sale.status === 'Pending' ? 'Pendente' : sale.status === 'Completed' ? 'Concluído' : sale.status}
                                                 </span>
-                                                <span className="text-[9px] bg-slate-100 text-slate-600 px-1.5 py-0.5 rounded font-medium uppercase">{sale.paymentMethod}</span>
+                                                <span className="text-[9px] bg-slate-100 text-slate-600 px-1.5 py-0.5 rounded font-medium uppercase">
+                                                    {sale.paymentMethod === 'Credit' ? 'Crédito' : sale.paymentMethod === 'Debit' ? 'Débito' : sale.paymentMethod === 'Cash' ? 'Dinheiro' : sale.paymentMethod === 'Split' ? 'Fiado / Prazo' : sale.paymentMethod}
+                                                </span>
                                             </div>
                                             <div className="flex gap-1">
                                                 {isAdmin && sale.status === 'Pending' && onUpdateSale && (

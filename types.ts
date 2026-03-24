@@ -171,7 +171,7 @@ export interface Order {
   customerPhone?: string;
   address?: string;
   deliveryMethod: 'DELIVERY' | 'PICKUP';
-  paymentMethod: 'PIX' | 'CARD' | 'CASH';
+  paymentMethod: 'PIX' | 'CREDIT' | 'DEBIT' | 'CASH';
   items: SaleItem[];
   total: number;
   status: 'PENDING' | 'PREPARING' | 'READY' | 'DELIVERED' | 'CANCELLED';
