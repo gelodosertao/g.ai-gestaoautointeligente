@@ -2,6 +2,7 @@ import React, { useState, useRef } from 'react';
 import { User, Customer, Branch } from '../types';
 import { Users, Plus, Upload, Search, Trash2, Save, X, FileText, Edit, ArrowLeft, ArrowUpDown, ArrowUp, ArrowDown, Building2 } from 'lucide-react';
 import { read, utils } from 'xlsx';
+import { CUSTOMER_SEGMENTS } from '../constants';
 import { getFixedFeeByNeighborhood } from '../services/utils';
 
 interface CustomersProps {
@@ -14,20 +15,7 @@ interface CustomersProps {
     onBack: () => void;
 }
 
-const CUSTOMER_SEGMENTS = [
-    'Adega',
-    'Ambulante',
-    'Atacadista',
-    'Bar',
-    'Conveniência',
-    'Distribuidora',
-    'Eventos',
-    'Geleiro',
-    'Mercadinho',
-    'Restaurante',
-    'Supermercado',
-    'Cardápio Digital'
-];
+
 
 const Customers: React.FC<CustomersProps> = ({ customers, onAddCustomer, onImportCustomers, currentUser, onUpdateCustomer, onDeleteCustomer, onBack }) => {
     // ... existing state ...

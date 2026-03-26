@@ -2,6 +2,7 @@
 import { Product, Sale, Customer, User, Branch, SaleItem } from '../types';
 import { ShoppingCart, LogOut, User as UserIcon, Plus, Minus, Search, CheckCircle, ArrowLeft, History, Store, MapPin, Edit, Trash2, Save, X, Printer, Check } from 'lucide-react';
 import html2canvas from 'html2canvas';
+import { CUSTOMER_SEGMENTS } from '../constants';
 import { hardwareBridge } from '../services/hardwareBridge';
 
 interface WholesalePOSProps {
@@ -542,8 +543,7 @@ const WholesalePOS: React.FC<WholesalePOSProps> = ({
                                         <input type="text" placeholder="CPF / CNPJ" className="px-3 py-2 bg-white border border-blue-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-400" value={newCustomer.cpfCnpj} onChange={e => setNewCustomer({ ...newCustomer, cpfCnpj: e.target.value })} />
                                         <select className="px-3 py-2 bg-white border border-blue-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-400" value={newCustomer.segment} onChange={e => setNewCustomer({ ...newCustomer, segment: e.target.value })}>
                                             <option value="">Segmento</option>
-                                            <option>Mercado</option><option>Posto</option><option>Conveniência</option>
-                                            <option>Restaurante</option><option>Evento</option><option>Outros</option>
+                                            {CUSTOMER_SEGMENTS.map(s => <option key={s} value={s}>{s}</option>)}
                                         </select>
                                     </div>
                                     <button onClick={handleRegisterCustomer} className="w-full bg-blue-600 hover:bg-blue-700 text-white py-3 rounded-xl font-black flex items-center justify-center gap-2 active:scale-95 transition-all text-sm">
@@ -1145,12 +1145,7 @@ const WholesalePOS: React.FC<WholesalePOSProps> = ({
                                         onChange={(e) => setNewCustomer({ ...newCustomer, segment: e.target.value })}
                                     >
                                         <option value="">Selecione...</option>
-                                        <option value="Mercado">Mercado</option>
-                                        <option value="Posto">Posto</option>
-                                        <option value="Conveniência">Conveniência</option>
-                                        <option value="Restaurante">Restaurante</option>
-                                        <option value="Evento">Evento</option>
-                                        <option value="Outros">Outros</option>
+                                        {CUSTOMER_SEGMENTS.map(s => <option key={s} value={s}>{s}</option>)}
                                     </select>
                                 </div>
                             </div>
