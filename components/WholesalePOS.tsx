@@ -37,7 +37,7 @@ const WholesalePOS: React.FC<WholesalePOSProps> = ({
     const [monthFilter, setMonthFilter] = useState(new Date().toISOString().substring(0, 7)); // YYYY-MM
 
     // Cart State
-    const [cart, setCart] = useState<{ product: Product, quantity: number }[]>([]);
+    const [cart, setCart] = useState<{ product: Product, quantity: number, customPrice?: number }[]>([]);
     const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
     const [customerSearchQuery, setCustomerSearchQuery] = useState('');
 
@@ -163,6 +163,10 @@ const WholesalePOS: React.FC<WholesalePOSProps> = ({
         setCart(prev => prev.map(item => item.product.id === productId ? { ...item, quantity } : item));
     };
 
+    const updatePrice = (productId: string, price: number) => {
+        setCart(prev => prev.map(item => item.product.id === productId ? { ...item, customPrice: price } : item));
+    };
+
     // Calculate dynamic pricing for "Gelo Sabor" based on total volume
     const totalFlavoredIce = useMemo(() => {
         return cart.reduce((acc, item) => item.product.category === 'Gelo Sabor' ? acc + item.quantity : acc, 0);
@@ -178,11 +182,12 @@ const WholesalePOS: React.FC<WholesalePOSProps> = ({
 
     const currentFlavoredTierPrice = getTieredPrice(totalFlavoredIce);
 
-    const getProductPrice = (product: Product) => {
+    const getProductPrice = (product: Product, customPrice?: number) => {
+        if (customPrice !== undefined) return customPrice;
         return product.category === 'Gelo Sabor' ? currentFlavoredTierPrice : product.priceMatriz;
     };
 
-    const cartTotal = cart.reduce((acc, item) => acc + (getProductPrice(item.product) * item.quantity), 0);
+    const cartTotal = cart.reduce((acc, item) => acc + (getProductPrice(item.product, item.customPrice) * item.quantity), 0);
 
     const handleRegisterCustomer = async () => {
         if (!newCustomer.name) return alert("O nome do cliente é obrigatório!");
@@ -218,11 +223,11 @@ const WholesalePOS: React.FC<WholesalePOSProps> = ({
         if (cart.length === 0) return alert("Carrinho vazio!");
         if (!selectedCustomer) return alert("Selecione um cliente para o atacado.");
 
-        const saleItems: SaleItem[] = cart.map(({ product, quantity }) => ({
+        const saleItems: SaleItem[] = cart.map(({ product, quantity, customPrice }) => ({
             productId: product.id,
             productName: product.name,
             quantity,
-            priceAtSale: getProductPrice(product),
+            priceAtSale: getProductPrice(product, customPrice),
         }));
 
         // ADM can assign the sale to a specific seller
@@ -687,28 +692,45 @@ const WholesalePOS: React.FC<WholesalePOSProps> = ({
                 </h2>
 
                 <div className="space-y-3 mb-6">
-                    {cart.map((item, idx) => (
-                        <div key={idx} className="bg-white p-3 rounded-xl shadow-sm border border-slate-100 flex items-center justify-between">
-                            <div className="flex-1">
-                                <h4 className="font-bold text-slate-800 leading-tight">{item.product.name}</h4>
-                                <p className="text-green-600 font-bold text-sm">
-                                    R$ {getProductPrice(item.product).toFixed(2)}
-                                    {item.product.category === 'Gelo Sabor' && <span className="text-[10px] text-orange-500 ml-1">dinâmico</span>}
-                                </p>
+                    {cart.map((item, idx) => {
+                        const currentPrice = getProductPrice(item.product, item.customPrice);
+                        return (
+                            <div key={idx} className="bg-white p-3 rounded-xl shadow-sm border border-slate-100 flex items-center justify-between">
+                                <div className="flex-1">
+                                    <h4 className="font-bold text-slate-800 leading-tight">{item.product.name}</h4>
+                                    {isAdmin ? (
+                                        <div className="flex items-center gap-1 mt-1">
+                                            <span className="text-xs font-bold text-slate-400">R$</span>
+                                            <input
+                                                type="number"
+                                                step="0.01"
+                                                value={currentPrice}
+                                                onChange={(e) => updatePrice(item.product.id, parseFloat(e.target.value) || 0)}
+                                                className="w-20 px-2 py-0.5 bg-blue-50 border border-blue-100 rounded text-blue-700 font-black text-sm outline-none focus:ring-1 focus:ring-blue-500"
+                                            />
+                                            {item.product.category === 'Gelo Sabor' && <span className="text-[10px] text-orange-500 font-bold italic">dinâmico</span>}
+                                        </div>
+                                    ) : (
+                                        <p className="text-green-600 font-bold text-sm">
+                                            R$ {currentPrice.toFixed(2)}
+                                            {item.product.category === 'Gelo Sabor' && <span className="text-[10px] text-orange-500 ml-1">dinâmico</span>}
+                                        </p>
+                                    )}
+                                </div>
+                                <div className="flex items-center gap-2 bg-slate-50 rounded-lg p-1 border border-slate-100">
+                                    <button onClick={() => updateQuantity(item.product.id, item.quantity - (item.product.category === 'Gelo Sabor' ? 10 : 1))} className="w-8 h-8 flex items-center justify-center text-slate-500 font-bold text-xl active:scale-95">-</button>
+                                    <input
+                                        type="number"
+                                        value={item.quantity || ''}
+                                        onChange={(e) => updateQuantity(item.product.id, parseInt(e.target.value) || 0)}
+                                        onFocus={(e) => e.target.select()}
+                                        className="w-10 text-center font-bold text-slate-800 bg-transparent outline-none hide-arrows"
+                                    />
+                                    <button onClick={() => updateQuantity(item.product.id, item.quantity + (item.product.category === 'Gelo Sabor' ? 10 : 1))} className="w-8 h-8 flex items-center justify-center text-orange-500 font-bold text-xl active:scale-95">+</button>
+                                </div>
                             </div>
-                            <div className="flex items-center gap-2 bg-slate-50 rounded-lg p-1 border border-slate-100">
-                                <button onClick={() => updateQuantity(item.product.id, item.quantity - (item.product.category === 'Gelo Sabor' ? 10 : 1))} className="w-8 h-8 flex items-center justify-center text-slate-500 font-bold text-xl active:scale-95">-</button>
-                                <input
-                                    type="number"
-                                    value={item.quantity || ''}
-                                    onChange={(e) => updateQuantity(item.product.id, parseInt(e.target.value) || 0)}
-                                    onFocus={(e) => e.target.select()}
-                                    className="w-10 text-center font-bold text-slate-800 bg-transparent outline-none hide-arrows"
-                                />
-                                <button onClick={() => updateQuantity(item.product.id, item.quantity + (item.product.category === 'Gelo Sabor' ? 10 : 1))} className="w-8 h-8 flex items-center justify-center text-orange-500 font-bold text-xl active:scale-95">+</button>
-                            </div>
-                        </div>
-                    ))}
+                        );
+                    })}
                 </div>
 
                 <div className="fixed bottom-20 left-4 right-4 z-10">
@@ -1177,6 +1199,7 @@ const WholesalePOS: React.FC<WholesalePOSProps> = ({
 
                 {/* Order Identification */}
                 <div style={{ marginBottom: '20px' }}>
+                    <p style={{ fontSize: '11px', fontWeight: 800, color: '#666', margin: '0 0 5px', textTransform: 'uppercase', letterSpacing: '1px' }}>*** Cupom não Fiscal ***</p>
                     <p style={{ fontSize: '13px', fontWeight: 900, color: '#555', margin: 0 }}>RECIBO DE PEDIDO</p>
                     <p style={{ fontSize: '16px', fontWeight: 900, margin: '5px 0' }}>#{lastCompletedSale?.id.substring(0, 8).toUpperCase()}</p>
                     <p style={{ fontSize: '12px', color: '#666' }}>{lastCompletedSale?.createdAt ? new Date(lastCompletedSale.createdAt).toLocaleString('pt-BR') : new Date().toLocaleString('pt-BR')}</p>
