@@ -18,6 +18,48 @@ interface WholesalePOSProps {
     onBack?: () => void;
 }
 
+const PriceInput: React.FC<{
+    value: number | undefined;
+    placeholder: string;
+    onChange: (val: number) => void;
+    className?: string;
+}> = ({ value, placeholder, onChange, className }) => {
+    const [localValue, setLocalValue] = React.useState(value !== undefined ? value.toString().replace('.', ',') : '');
+
+    React.useEffect(() => {
+        const currentLocalNum = parseFloat(localValue.replace(',', '.'));
+        if (currentLocalNum !== value) {
+            setLocalValue(value !== undefined ? value.toString().replace('.', ',') : '');
+        }
+    }, [value]);
+
+    return (
+        <input
+            type="text"
+            inputMode="decimal"
+            value={localValue}
+            placeholder={placeholder}
+            onChange={(e) => {
+                const raw = e.target.value;
+                const normalized = raw.replace(',', '.');
+                if (raw === '' || /^\d*[.,]?\d*$/.test(raw)) {
+                    setLocalValue(raw);
+                    const parsed = parseFloat(normalized);
+                    if (!isNaN(parsed)) {
+                        onChange(parsed);
+                    } else if (raw === '') {
+                        onChange(0);
+                    }
+                }
+            }}
+            onBlur={() => {
+                setLocalValue(value !== undefined ? value.toString().replace('.', ',') : '');
+            }}
+            className={className}
+        />
+    );
+};
+
 const WholesalePOS: React.FC<WholesalePOSProps> = ({
     products,
     sales,
@@ -701,11 +743,10 @@ const WholesalePOS: React.FC<WholesalePOSProps> = ({
                                     {isAdmin ? (
                                         <div className="flex items-center gap-1 mt-1">
                                             <span className="text-xs font-bold text-slate-400">R$</span>
-                                            <input
-                                                type="number"
-                                                step="0.01"
-                                                value={currentPrice}
-                                                onChange={(e) => updatePrice(item.product.id, parseFloat(e.target.value) || 0)}
+                                            <PriceInput
+                                                value={item.customPrice}
+                                                placeholder={getProductPrice(item.product).toFixed(2)}
+                                                onChange={(val) => updatePrice(item.product.id, val)}
                                                 className="w-20 px-2 py-0.5 bg-blue-50 border border-blue-100 rounded text-blue-700 font-black text-sm outline-none focus:ring-1 focus:ring-blue-500"
                                             />
                                             {item.product.category === 'Gelo Sabor' && <span className="text-[10px] text-orange-500 font-bold italic">dinâmico</span>}
@@ -1053,13 +1094,11 @@ const WholesalePOS: React.FC<WholesalePOSProps> = ({
                                             </div>
                                             <div className="w-24">
                                                 <label className="text-[10px] text-slate-500 block">Valor Un.</label>
-                                                <input
-                                                    type="number"
-                                                    min="0"
-                                                    step="0.01"
-                                                    className="w-full px-2 py-1 text-xs border border-slate-300 rounded focus:ring-1 focus:ring-orange-500 outline-none"
+                                                <PriceInput
                                                     value={item.priceAtSale}
-                                                    onChange={(e) => updateEditingItem(index, 'priceAtSale', parseFloat(e.target.value))}
+                                                    placeholder="0,00"
+                                                    onChange={(val) => updateEditingItem(index, 'priceAtSale', val)}
+                                                    className="w-full px-2 py-1 text-xs border border-slate-300 rounded focus:ring-1 focus:ring-orange-500 outline-none"
                                                 />
                                             </div>
                                             <button
