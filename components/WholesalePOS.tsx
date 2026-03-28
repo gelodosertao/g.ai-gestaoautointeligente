@@ -1074,6 +1074,23 @@ const WholesalePOS: React.FC<WholesalePOSProps> = ({
                                 </select>
                             </div>
 
+                            {isAdmin && (
+                                <div>
+                                    <label className="block text-sm font-bold text-slate-700 mb-1">Meio de Pagamento</label>
+                                    <select
+                                        className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 bg-white"
+                                        value={editingSale.paymentMethod}
+                                        onChange={(e) => setEditingSale({ ...editingSale, paymentMethod: e.target.value as any })}
+                                    >
+                                        <option value="Pix">PIX</option>
+                                        <option value="Cash">Dinheiro</option>
+                                        <option value="Credit">Cartão de Crédito</option>
+                                        <option value="Debit">Cartão de Débito</option>
+                                        <option value="Split">Fiado / Prazo</option>
+                                    </select>
+                                </div>
+                            )}
+
                             <div className="border-t border-slate-200 pt-3">
                                 <label className="block text-sm font-bold text-slate-700 mb-2">Itens do Pedido</label>
                                 <div className="space-y-2 max-h-60 overflow-y-auto pr-2">

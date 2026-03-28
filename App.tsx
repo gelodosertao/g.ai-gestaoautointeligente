@@ -254,7 +254,8 @@ const App: React.FC = () => {
         amount: newSale.total,
         type: 'Income',
         category: 'Vendas',
-        branch: newSale.branch
+        branch: newSale.branch,
+        paymentMethod: newSale.paymentMethod as any
       };
       setFinancials(prev => [newFinancial, ...prev]);
 
@@ -407,7 +408,8 @@ const App: React.FC = () => {
         amount: updatedSale.total,
         type: 'Income',
         category: 'Vendas',
-        branch: updatedSale.branch
+        branch: updatedSale.branch,
+        paymentMethod: updatedSale.paymentMethod as any
       };
       setFinancials(prev => [newFinancial, ...prev]);
 
