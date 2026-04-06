@@ -150,7 +150,7 @@ export interface FinancialRecord {
   paymentMethod?: 'Pix' | 'Credit' | 'Debit' | 'Cash';
 }
 
-export type Role = 'ADMIN' | 'OPERATOR' | 'FACTORY' | 'WHOLESALE_SUPERVISOR' | 'WHOLESALE_REPRESENTATIVE';
+export type Role = 'ADMIN' | 'OPERATOR' | 'FACTORY' | 'WHOLESALE_REPRESENTATIVE';
 
 export interface User {
   id: string;
@@ -193,6 +193,9 @@ export interface Customer {
   branch?: Branch;
   creatorId?: string;   // ID of the user who registered the customer
   creatorName?: string; // Name of the user who registered the customer
+  responsibleName?: string;
+  establishmentName?: string;
+  zipCode?: string;
 }
 
 export interface StockMovement {

@@ -18,10 +18,13 @@ export const dbUsers = {
       throw new Error('Usuário não encontrado ou senha incorreta.');
     }
 
-    // 2. Com a sessão gerada e protegida (JWT em mãos), puxar o perfil do usuário
+    // 2. Com a sessão gerada e protegida (JWT em mãos), puxar o perfil do usuário e a Empresa
     const { data: user, error } = await supabase
       .from('app_users')
-      .select('*')
+      .select(`
+        *,
+        tenants (name)
+      `)
       .eq('id', authData.user.id)
       .single();
 
@@ -37,6 +40,7 @@ export const dbUsers = {
       role: user.role as Role,
       avatarInitials: user.avatar_initials,
       tenantId: user.tenant_id || '00000000-0000-0000-0000-000000000000',
+      tenantName: user.tenants?.name || 'G.AI Gestão',
       allowedModules: user.allowed_modules
     };
     localStorage.setItem('app_user', JSON.stringify(sessionUser));
@@ -65,8 +69,13 @@ export const dbUsers = {
     // 3. Criar a conta oficial no Supabase Auth usando o Client Secundário
     // (Avisando que, se um admin estiver logado e criando contas pra gerentes, o persistSession:false impede ele de ser deslogado!)
     const { createClient } = await import('@supabase/supabase-js');
-    const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || 'https://licetziylggxtnoutjkn.supabase.co';
-    const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxpY2V0eml5bGdneHRub3V0amtuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjQ2ODQ2OTUsImV4cCI6MjA4MDI2MDY5NX0.olJiaq0HKZ3-DQlLjzBxodob9vaAxX2v9SaEmIRtO4w';
+    const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+    const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+
+    if (!supabaseUrl || !supabaseKey) {
+      throw new Error("Configuração do Supabase (URL/Key) não encontrada no .env");
+    }
+
     const registerClient = createClient(supabaseUrl, supabaseKey, { auth: { persistSession: false, autoRefreshToken: false } });
 
     // Criar conta de autenticação
@@ -113,6 +122,12 @@ export const dbUsers = {
       tenantId: data.tenant_id,
       allowedModules: data.allowed_modules
     };
+
+    // Puxar o nome da empresa para guardar na sessão inicial
+    if (sessionUser.tenantId) {
+      const { data: tenantData } = await supabase.from('tenants').select('name').eq('id', sessionUser.tenantId).single();
+      if (tenantData) sessionUser.tenantName = tenantData.name;
+    }
 
     if (!existingTenantId) {
       localStorage.setItem('app_user', JSON.stringify(sessionUser));
@@ -190,6 +205,48 @@ export const dbUsers = {
     });
 
     if (error) throw new Error(error.message || 'Falha ao excluir o usuário do servidor.');
+  }
+};
+
+// --- TENANTS & SaaS ---
+export const dbTenants = {
+  async registerCompany(data: {
+    companyName: string,
+    cnpj: string,
+    ownerName: string,
+    ownerEmail: string,
+    ownerPassword: string
+  }): Promise<User> {
+    // 1. Criar a Empresa (Tenant)
+    const { data: tenant, error: tenantError } = await supabase
+      .from('tenants')
+      .insert([{
+        name: data.companyName,
+        cnpj: data.cnpj,
+        subscription_status: 'TRIAL'
+      }])
+      .select()
+      .single();
+
+    if (tenantError) {
+      if (tenantError.code === '23505') throw new Error("Este CNPJ já está cadastrado em nosso sistema.");
+      throw new Error("Falha ao registrar empresa: " + tenantError.message);
+    }
+
+    // 2. Registrar o Usuário como ADMIN (Owner) vinculado a essa empresa
+    return dbUsers.register({
+      name: data.ownerName,
+      email: data.ownerEmail,
+      password: data.ownerPassword,
+      role: 'ADMIN',
+      allowedModules: ['DASHBOARD', 'SALES', 'INVENTORY', 'FINANCIAL', 'CUSTOMERS', 'PRODUCTION', 'ORDER_CENTER', 'REPORTS', 'CRM', 'SETTINGS']
+    }, tenant.id);
+  },
+
+  async getMyCompany(tenantId: string) {
+    const { data, error } = await supabase.from('tenants').select('*').eq('id', tenantId).single();
+    if (error) throw error;
+    return data;
   }
 };
 
@@ -546,47 +603,57 @@ export const dbCustomers = {
       segment: row.segment,
       branch: row.branch as Branch,
       creatorId: row.creator_id,
-      creatorName: row.creator_name
+      creatorName: row.creator_name,
+      responsibleName: row.responsible_name,
+      establishmentName: row.establishment_name,
+      zipCode: row.zip_code
     }));
   },
 
   async add(customer: Customer, tenantId: string) {
-    const { error } = await supabase.from('customers').insert([{
+    const { data, error } = await supabase.from('customers').insert([{
       id: customer.id,
       name: customer.name,
       cpf_cnpj: customer.cpfCnpj,
       email: customer.email,
       phone: customer.phone,
       address: customer.address,
+      segment: customer.segment,
       city: customer.city,
       state: customer.state,
-      segment: customer.segment,
       branch: customer.branch,
+      tenant_id: tenantId,
       creator_id: customer.creatorId,
       creator_name: customer.creatorName,
-      tenant_id: tenantId
-    }]);
+      responsible_name: customer.responsibleName,
+      establishment_name: customer.establishmentName,
+      zip_code: customer.zipCode
+    }]).select();
     if (error) throw error;
+    return data?.[0];
   },
 
   async addBatch(customers: Customer[], tenantId: string) {
     if (customers.length === 0) return;
-    const rows = customers.map(c => ({
+    const mapped = customers.map(c => ({
       id: c.id,
       name: c.name,
       cpf_cnpj: c.cpfCnpj,
       email: c.email,
       phone: c.phone,
       address: c.address,
+      segment: c.segment,
       city: c.city,
       state: c.state,
-      segment: c.segment,
       branch: c.branch,
+      tenant_id: tenantId,
       creator_id: c.creatorId,
       creator_name: c.creatorName,
-      tenant_id: tenantId
+      responsible_name: c.responsibleName,
+      establishment_name: c.establishmentName,
+      zip_code: c.zipCode
     }));
-    const { error } = await supabase.from('customers').insert(rows);
+    const { error } = await supabase.from('customers').insert(mapped);
     if (error) throw error;
   },
 
@@ -597,12 +664,14 @@ export const dbCustomers = {
       email: customer.email,
       phone: customer.phone,
       address: customer.address,
+      segment: customer.segment,
       city: customer.city,
       state: customer.state,
-      segment: customer.segment,
       branch: customer.branch,
-      creator_id: customer.creatorId,
-      creator_name: customer.creatorName
+      creator_name: customer.creatorName,
+      responsible_name: customer.responsibleName,
+      establishment_name: customer.establishmentName,
+      zip_code: customer.zipCode
     }).eq('id', customer.id);
     if (error) throw error;
   },
