@@ -102,7 +102,7 @@ const App: React.FC = () => {
         // Only navigate if NOT in menu mode and currently at root or login
         if (!isMenuMode && (location.pathname === '/' || location.pathname === '/login')) {
           let initialView: ViewState = 'DASHBOARD';
-          if (user.role === 'WHOLESALE_REPRESENTATIVE') {
+          if (user.role === 'WHOLESALE_REPRESENTATIVE' || (user.role as string) === 'WHOLESALE_SUPERVISOR') {
             initialView = 'WHOLESALE_POS';
           } else if (user.allowedModules && user.allowedModules.length > 0) {
             initialView = user.allowedModules[0] as ViewState;
@@ -520,7 +520,8 @@ const App: React.FC = () => {
   const handleLogin = (user: User) => {
     setCurrentUser(user);
     let initialView: ViewState = 'DASHBOARD';
-    if (user.role === 'WHOLESALE_REPRESENTATIVE') {
+    // Compatibilidade: Aceitar tanto a nova role quanto a antiga para redirecionamento
+    if (user.role === 'WHOLESALE_REPRESENTATIVE' || (user.role as string) === 'WHOLESALE_SUPERVISOR') {
       initialView = 'WHOLESALE_POS';
     } else if (user.allowedModules && user.allowedModules.length > 0) {
       initialView = user.allowedModules[0] as ViewState;
@@ -684,7 +685,7 @@ const App: React.FC = () => {
                   >
                     <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg>
                   </button>
-                  <span className="ml-4 text-white font-bold text-xl tracking-tight">{currentUser?.tenantName || 'G.AI'}</span>
+                  <span className="ml-4 text-white font-bold text-xl tracking-tight">GELO DO SERTÃO</span>
                 </div>
 
                 <AppSidebar
