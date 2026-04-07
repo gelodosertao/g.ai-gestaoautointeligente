@@ -151,7 +151,7 @@ const Sales: React.FC<SalesProps> = ({ sales, products, customers, onAddSale, on
    };
 
    // --- POS (PDV) STATE ---
-   // PDV ADEGA: always Filial (varejo)
+   // PDV VAREJO: always Filial (varejo)
    const selectedBranch = Branch.FILIAL;
    const [cart, setCart] = useState<CartItem[]>([]);
    const [scannerStatus, setScannerStatus] = useState<'DISCONNECTED' | 'CONNECTING' | 'CONNECTED'>('DISCONNECTED');
@@ -805,232 +805,288 @@ const Sales: React.FC<SalesProps> = ({ sales, products, customers, onAddSale, on
                   ))}
             </div>
          ) : (
-            // --- POS (POINT OF SALE) VIEW ---
-            <div className="relative h-[calc(100vh-140px)] md:h-[calc(100vh-12rem)] pb-4 md:pb-0 flex flex-col">
-               {/* Unified Top Header: Branches, Search & Scanner */}
-               <div className="bg-white p-3 md:p-4 rounded-2xl shadow-[0_4px_20px_rgba(0,0,0,0.05)] border border-slate-100 mb-4 shrink-0 relative z-40">
-                  <div className="flex flex-col lg:flex-row justify-between items-stretch lg:items-center gap-4">
+            // --- POS (POINT OF SALE) VIEW --- NEW DESIGN ---
+            <div className="h-[calc(100vh-160px)] md:h-[calc(100vh-11rem)] flex flex-col md:flex-row gap-0 overflow-hidden rounded-2xl shadow-2xl border border-slate-200 bg-white animate-in fade-in zoom-in-95 duration-500">
 
-                     <div className="flex gap-3 w-full lg:flex-1 max-w-5xl relative">
+               {/* ===== LEFT PANEL: CART ===== */}
+               <div className="flex flex-col w-full md:w-[340px] lg:w-[380px] xl:w-[420px] shrink-0 bg-white border-b md:border-b-0 md:border-r border-slate-100">
+
+                  {/* Cart Header */}
+                  <div className="bg-gradient-to-br from-orange-500 to-orange-600 text-white p-4 shrink-0">
+                     <div className="flex items-center justify-between mb-3">
+                        <div className="flex items-center gap-2">
+                           <div className="p-1.5 bg-white/20 rounded-lg">
+                              <ShoppingCart size={18} />
+                           </div>
+                           <div>
+                              <p className="text-[10px] font-black uppercase tracking-[0.2em] opacity-70">Terminal de Vendas</p>
+                              <p className="text-base font-black uppercase tracking-tight leading-none">PDV Varejo</p>
+                           </div>
+                        </div>
+                        <div className="text-right">
+                           <p className="text-[10px] font-black opacity-70 uppercase">Operador</p>
+                           <p className="text-xs font-bold truncate max-w-[100px]">{currentUser.name}</p>
+                        </div>
+                     </div>
+
+                     {/* Customer Selection */}
+                     <button
+                        onClick={() => setShowCustomerModal(true)}
+                        className="w-full flex items-center gap-2 bg-white/15 hover:bg-white/25 px-3 py-2 rounded-xl text-xs font-bold backdrop-blur-sm transition-all border border-white/20 group"
+                     >
+                        <UserIcon size={14} className="shrink-0 group-hover:scale-110 transition-transform" />
+                        <span className="truncate">{selectedCustomer ? selectedCustomer.name : 'Vincular Cliente (Opcional)'}</span>
+                        {selectedCustomer && (
+                           <button
+                              onClick={(e) => { e.stopPropagation(); setSelectedCustomer(null); }}
+                              className="ml-auto hover:bg-white/20 rounded-full p-0.5 transition-colors"
+                           ><X size={12} /></button>
+                        )}
+                     </button>
+                  </div>
+
+                  {/* Cart Items */}
+                  <div className="flex-1 overflow-y-auto scrollbar-thin scrollbar-thumb-orange-100 bg-slate-50/50">
+                     {cart.length === 0 ? (
+                        <div className="h-full flex flex-col items-center justify-center text-slate-300 p-8">
+                           <ShoppingCart size={64} strokeWidth={0.8} className="opacity-20 mb-4" />
+                           <p className="font-black text-slate-400 uppercase tracking-widest text-sm text-center">Carrinho Vazio</p>
+                           <p className="text-xs text-slate-400 mt-1 text-center">Clique nos produtos ao lado</p>
+                        </div>
+                     ) : (
+                        <div className="p-2 space-y-1.5">
+                           {cart.map(item => (
+                              <div
+                                 key={`${item.product.id}-${item.negotiatedPrice}`}
+                                 className="bg-white rounded-xl border border-slate-100 shadow-sm flex items-center gap-2 p-2 hover:border-orange-200 group transition-all"
+                              >
+                                 {/* Product thumbnail in cart */}
+                                 <div className="w-12 h-12 rounded-lg overflow-hidden shrink-0 bg-slate-100 border border-slate-200">
+                                    {item.product.image ? (
+                                       <img src={item.product.image} alt={item.product.name} className="w-full h-full object-cover" />
+                                    ) : (
+                                       <div className="w-full h-full flex items-center justify-center">
+                                          <Package size={20} className="text-slate-300" />
+                                       </div>
+                                    )}
+                                 </div>
+
+                                 <div className="flex-1 min-w-0">
+                                    <p className="font-black text-xs text-slate-800 truncate leading-tight">{item.product.name}</p>
+                                    <p className="text-[10px] text-slate-500 font-bold">{formatCurrency(getProductPrice(item))}/{item.product.unit}</p>
+                                    {item.isPack && <span className="text-[9px] font-black text-purple-600 bg-purple-50 px-1.5 py-0.5 rounded-full">Fardo</span>}
+                                 </div>
+
+                                 <div className="flex items-center shrink-0">
+                                    <button
+                                       onClick={() => updateQuantity(item.product.id, -1, item.negotiatedPrice, item.isPack)}
+                                       className="w-7 h-7 flex items-center justify-center bg-slate-100 rounded-lg text-slate-600 hover:bg-orange-100 hover:text-orange-700 active:scale-90 transition-all font-black text-sm"
+                                    >−</button>
+                                    <span className="w-8 text-center font-black text-sm text-slate-900 tabular-nums">{item.quantity}</span>
+                                    <button
+                                       onClick={() => updateQuantity(item.product.id, 1, item.negotiatedPrice, item.isPack)}
+                                       className="w-7 h-7 flex items-center justify-center bg-orange-500 text-white rounded-lg hover:bg-orange-600 active:scale-95 transition-all font-black text-sm"
+                                    >+</button>
+                                 </div>
+
+                                 <div className="text-right shrink-0 min-w-[60px]">
+                                    <p className="font-black text-sm text-slate-800 tabular-nums">{formatCurrency(item.quantity * getProductPrice(item))}</p>
+                                 </div>
+
+                                 <button
+                                    onClick={() => removeFromCart(item.product.id, item.negotiatedPrice, item.isPack)}
+                                    className="p-1.5 text-slate-200 hover:text-rose-500 hover:bg-rose-50 rounded-lg transition-all opacity-0 group-hover:opacity-100 shrink-0"
+                                 >
+                                    <Trash2 size={14} />
+                                 </button>
+                              </div>
+                           ))}
+                        </div>
+                     )}
+                  </div>
+
+                  {/* Checkout Footer */}
+                  <div className="p-3 bg-white border-t border-slate-100 shrink-0">
+                     {/* Discount row */}
+                     <div className="flex items-center justify-between mb-2 gap-2">
+                        <span className="text-xs font-black text-slate-400 uppercase tracking-widest">Desconto</span>
+                        <div className="relative">
+                           <span className="absolute left-2 top-1/2 -translate-y-1/2 text-xs font-black text-orange-400">R$</span>
+                           <input
+                              type="number"
+                              value={discount}
+                              onChange={(e) => setDiscount(e.target.value)}
+                              className="w-24 bg-orange-50 border border-orange-100 rounded-lg pl-7 pr-1.5 py-1.5 text-sm font-black text-orange-700 outline-none focus:ring-2 focus:ring-orange-200 transition-all tabular-nums"
+                              placeholder="0,00"
+                           />
+                        </div>
+                     </div>
+
+                     {/* Total */}
+                     <div className="flex items-center justify-between mb-3">
+                        <div className="flex items-center gap-1.5">
+                           <div className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse"></div>
+                           <span className="text-xs font-black text-slate-500 uppercase tracking-widest">Total a Pagar</span>
+                        </div>
+                        <span className="text-2xl font-black text-slate-900 tabular-nums tracking-tighter">
+                           {formatCurrency(cartTotal)}
+                        </span>
+                     </div>
+
+                     {/* Checkout Button */}
+                     <button
+                        onClick={initiateCheckout}
+                        disabled={cart.length === 0}
+                        className="w-full flex items-center justify-center gap-2 px-4 py-3.5 bg-emerald-500 text-white rounded-xl font-black text-sm uppercase tracking-widest shadow-lg shadow-emerald-500/30 hover:bg-emerald-600 active:scale-95 transition-all disabled:opacity-30 disabled:shadow-none disabled:hover:scale-100 disabled:hover:bg-emerald-500 group"
+                     >
+                        <CreditCard size={18} />
+                        Finalizar Venda
+                        <Send size={14} className="group-hover:translate-x-1 transition-transform" />
+                     </button>
+                  </div>
+               </div>
+
+               {/* ===== RIGHT PANEL: PRODUCT CATALOG ===== */}
+               <div className="flex flex-col flex-1 min-w-0 bg-slate-50">
+
+                  {/* Catalog Header: Search + Camera + Scanner */}
+                  <div className="bg-white border-b border-slate-100 p-3 shrink-0">
+                     <div className="flex gap-2 items-center">
                         <div className="relative flex-1 group z-40">
-                           <Search size={24} className="absolute left-4 top-1/2 transform -translate-y-1/2 text-slate-400 group-focus-within:text-orange-500 transition-colors" />
+                           <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-orange-500 transition-colors" />
                            <input
                               ref={barcodeInputRef}
                               type="text"
-
                               value={posSearchTerm}
                               onChange={(e) => setPosSearchTerm(e.target.value)}
                               onKeyDown={handleSearchKeyDown}
-                              placeholder="Pesquisar por NOME ou CÓDIGO (F2)..."
-                              className="w-full pl-12 pr-4 py-4 text-xl font-black rounded-2xl border-2 border-slate-100 focus:border-orange-500 focus:ring-4 focus:ring-orange-100 outline-none bg-slate-50/50 transition-all placeholder:text-slate-300"
+                              placeholder="Buscar produto ou código de barras (F2)..."
+                              className="w-full pl-9 pr-10 py-2.5 text-sm font-semibold rounded-xl border-2 border-slate-100 focus:border-orange-400 focus:ring-2 focus:ring-orange-100 outline-none bg-slate-50 transition-all placeholder:text-slate-300"
                            />
-
-                           {/* Quick Search Dropdown Overlay */}
-                           {posSearchTerm.length >= 2 && (
-                              <div className="absolute top-full left-0 right-0 mt-2 bg-white rounded-2xl shadow-2xl border border-slate-200 z-[100] max-h-96 overflow-y-auto animate-in fade-in slide-in-from-top-2 duration-200">
-                                 <div className="p-2 border-b border-slate-100 flex justify-between items-center sticky top-0 bg-white/90 backdrop-blur-sm">
-                                    <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-2">Resultados ({filteredPosProducts.length})</span>
-                                    <button onClick={() => setPosSearchTerm('')} className="p-1 hover:bg-slate-100 rounded-full"><X size={14} /></button>
-                                 </div>
-                                 <div className="p-1.5 flex flex-col gap-1">
-                                    {filteredPosProducts.length === 0 ? (
-                                       <div className="p-8 text-center text-slate-400 font-bold">Nenhum produto encontrado.</div>
-                                    ) : (
-                                       filteredPosProducts.slice(0, 50).map(product => (
-                                          <button
-                                             key={product.id}
-                                             onClick={() => { handleProductClick(product); setPosSearchTerm(''); }}
-                                             className="w-full flex items-center justify-between p-3 rounded-xl hover:bg-orange-50 hover:border-orange-200 border border-transparent transition-all group"
-                                          >
-                                             <div className="flex-1 text-left min-w-0 pr-4">
-                                                <div className="flex items-center gap-2">
-                                                   <span className="text-[10px] bg-slate-100 px-1.5 py-0.5 rounded font-black text-slate-500 uppercase">{product.category}</span>
-                                                   {product.barcode && <span className="text-[10px] text-slate-400 font-mono">{product.barcode}</span>}
-                                                </div>
-                                                <p className="font-black text-slate-800 truncate text-base">{product.name}</p>
-                                                <p className="text-xs text-slate-400 font-bold">Estoque: {getProductStock(product)} {product.unit}</p>
-                                             </div>
-                                             <div className="text-right shrink-0">
-                                                <div className="text-xl font-black text-orange-600 tracking-tighter">
-                                                   {formatCurrency(selectedBranch === Branch.FILIAL ? product.priceFilial : product.priceMatriz)}
-                                                </div>
-                                                <div className="text-[9px] font-black text-slate-400 uppercase">Clique para Adicionar</div>
-                                             </div>
-                                          </button>
-                                       ))
-                                    )}
-                                 </div>
-                              </div>
+                           {posSearchTerm && (
+                              <button
+                                 onClick={() => setPosSearchTerm('')}
+                                 className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-700"
+                              ><X size={14} /></button>
                            )}
-
-                           <div className="absolute right-4 top-1/2 -translate-y-1/2 hidden md:block">
-                              <span className="bg-slate-200 text-slate-500 px-2 py-1 rounded text-[10px] font-black">F2</span>
+                           <div className="absolute right-3 top-1/2 -translate-y-1/2 hidden md:block">
+                              {!posSearchTerm && <span className="bg-slate-200 text-slate-500 px-1.5 py-0.5 rounded text-[9px] font-black">F2</span>}
                            </div>
                         </div>
-                        <button onClick={startCamera} title="Abrir Câmera" className="p-4 rounded-2xl bg-sky-50 text-sky-700 border border-sky-100 hover:bg-sky-100 transition-all active:scale-95 shadow-sm"><Camera size={24} /></button>
-                        <button onClick={handlePairScanner} title="Conectar Scanner Bluetooth" className={`p-4 rounded-2xl border transition-all active:scale-95 shadow-sm ${scannerStatus === 'CONNECTED' ? 'bg-emerald-50 text-emerald-700 border-emerald-100' : 'bg-slate-900 text-white border-slate-800'}`}><Bluetooth size={24} /></button>
+                        <button onClick={startCamera} title="Câmera" className="p-2.5 rounded-xl bg-sky-50 text-sky-600 border border-sky-100 hover:bg-sky-100 transition-all active:scale-95 shrink-0">
+                           <Camera size={18} />
+                        </button>
+                        <button
+                           onClick={handlePairScanner}
+                           title="Scanner Bluetooth"
+                           className={`p-2.5 rounded-xl border transition-all active:scale-95 shrink-0 ${scannerStatus === 'CONNECTED' ? 'bg-emerald-50 text-emerald-600 border-emerald-200' : 'bg-slate-800 text-white border-slate-700'}`}
+                        >
+                           <Bluetooth size={18} />
+                        </button>
                      </div>
+
+                     {/* Category Filters */}
+                     <div className="flex gap-1.5 mt-2 overflow-x-auto pb-1 scrollbar-thin">
+                        <button
+                           onClick={() => setPosCategoryFilter('ALL')}
+                           className={`shrink-0 px-3 py-1.5 rounded-lg text-xs font-black uppercase tracking-wide transition-all ${posCategoryFilter === 'ALL'
+                                 ? 'bg-orange-500 text-white shadow-md shadow-orange-200'
+                                 : 'bg-white text-slate-500 border border-slate-200 hover:border-orange-300 hover:text-orange-500'
+                              }`}
+                        >Todos</button>
+                        {availableCategories.map(cat => (
+                           <button
+                              key={cat}
+                              onClick={() => setPosCategoryFilter(cat)}
+                              className={`shrink-0 px-3 py-1.5 rounded-lg text-xs font-black uppercase tracking-wide transition-all ${posCategoryFilter === cat
+                                    ? 'bg-orange-500 text-white shadow-md shadow-orange-200'
+                                    : 'bg-white text-slate-500 border border-slate-200 hover:border-orange-300 hover:text-orange-500'
+                                 }`}
+                           >{cat}</button>
+                        ))}
+                     </div>
+                  </div>
+
+                  {/* Product Grid */}
+                  <div className="flex-1 overflow-y-auto p-3 scrollbar-thin scrollbar-thumb-orange-100">
+                     {filteredPosProducts.length === 0 ? (
+                        <div className="h-full flex flex-col items-center justify-center text-slate-300">
+                           <Search size={48} strokeWidth={0.8} className="opacity-30 mb-3" />
+                           <p className="font-black text-slate-400 uppercase tracking-widest text-sm">Nenhum produto encontrado</p>
+                        </div>
+                     ) : (
+                        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-2.5">
+                           {filteredPosProducts.map(product => {
+                              const inCart = cart.find(c => c.product.id === product.id);
+                              const stock = getProductStock(product);
+                              const outOfStock = (product.isStockControlled !== false) && stock <= 0;
+                              return (
+                                 <button
+                                    key={product.id}
+                                    onClick={() => !outOfStock && handleProductClick(product)}
+                                    disabled={outOfStock}
+                                    className={`group relative flex flex-col bg-white rounded-2xl border-2 overflow-hidden shadow-sm transition-all duration-200 text-left ${outOfStock
+                                          ? 'border-slate-100 opacity-50 cursor-not-allowed'
+                                          : inCart
+                                             ? 'border-orange-400 shadow-orange-100 shadow-md scale-[1.01]'
+                                             : 'border-slate-100 hover:border-orange-300 hover:shadow-md hover:-translate-y-0.5'
+                                       }`}
+                                 >
+                                    {/* Product Image */}
+                                    <div className="relative bg-slate-50 aspect-square w-full overflow-hidden">
+                                       {product.image ? (
+                                          <img
+                                             src={product.image}
+                                             alt={product.name}
+                                             className="w-full h-full object-contain p-2 group-hover:scale-105 transition-transform duration-300"
+                                          />
+                                       ) : (
+                                          <div className="w-full h-full flex items-center justify-center">
+                                             <Package size={36} className="text-slate-200" />
+                                          </div>
+                                       )}
+
+                                       {/* In cart badge */}
+                                       {inCart && (
+                                          <div className="absolute top-1.5 right-1.5 w-6 h-6 bg-orange-500 text-white rounded-full flex items-center justify-center text-[10px] font-black shadow-lg">
+                                             {inCart.quantity}
+                                          </div>
+                                       )}
+
+                                       {/* Out of stock overlay */}
+                                       {outOfStock && (
+                                          <div className="absolute inset-0 bg-slate-100/80 flex items-center justify-center">
+                                             <span className="text-[10px] font-black text-slate-500 uppercase bg-white px-2 py-1 rounded-lg border border-slate-200">Sem Estoque</span>
+                                          </div>
+                                       )}
+                                    </div>
+
+                                    {/* Product Info */}
+                                    <div className="p-2 flex flex-col gap-1">
+                                       <p className="text-[9px] font-black text-slate-400 uppercase tracking-wider truncate">{product.category}</p>
+                                       <p className="text-xs font-black text-slate-800 leading-tight line-clamp-2">{product.name}</p>
+                                       <div className="flex items-center justify-between mt-auto pt-1">
+                                          <span className="text-sm font-black text-orange-600 tracking-tighter">
+                                             {formatCurrency(product.priceFilial)}
+                                          </span>
+                                          {!outOfStock && (
+                                             <div className={`w-6 h-6 rounded-lg flex items-center justify-center transition-all ${inCart
+                                                   ? 'bg-orange-500 text-white'
+                                                   : 'bg-slate-100 text-slate-400 group-hover:bg-orange-500 group-hover:text-white'
+                                                }`}>
+                                                <Plus size={14} strokeWidth={3} />
+                                             </div>
+                                          )}
+                                       </div>
+                                    </div>
+                                 </button>
+                              );
+                           })}
+                        </div>
+                     )}
                   </div>
                </div>
 
-               {/* --- PDV ADEGA VIEW --- */}
-               <div className="flex flex-col gap-3 flex-1 min-h-0 overflow-hidden animate-in fade-in zoom-in-95 duration-500">
-                  <div className="bg-white rounded-[2rem] shadow-[0_20px_50px_rgba(0,0,0,0.08)] border-2 border-slate-100 flex flex-col overflow-hidden h-full relative">
-                     {/* Header Banner */}
-                     <div className="p-4 bg-gradient-to-r from-orange-500 to-orange-600 text-white flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4 shadow-lg relative z-10">
-                        <div className="flex items-center gap-4 w-full lg:w-auto justify-between">
-                           <div className="flexItems-center gap-4 flex tracking-tighter">
-                              <div className="p-2 bg-white/20 rounded-xl backdrop-blur-md">
-                                 <ShoppingCart size={24} className="animate-pulse" />
-                              </div>
-                              <div>
-                                 <span className="font-black text-xs uppercase tracking-[0.2em] opacity-80 block">Terminal de Vendas</span>
-                                 <span className="font-black text-xl uppercase tracking-tighter">PDV Adega</span>
-                              </div>
-                           </div>
-                           <div className="flex lg:hidden flex-col items-end">
-                              <span className="text-[10px] font-black opacity-70 uppercase">Operador</span>
-                              <span className="text-sm font-bold truncate max-w-[100px]">{currentUser.name}</span>
-                           </div>
-                        </div>
-
-                        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 w-full lg:w-auto">
-                           {/* CUSTOMER SELECTION BUTTON (VAREJO) */}
-                           <button
-                              onClick={() => setShowCustomerModal(true)}
-                              className="flex-1 sm:flex-none flex items-center justify-center gap-2 bg-white/20 hover:bg-white/30 px-5 py-2.5 rounded-xl text-sm font-black backdrop-blur-sm transition-all border border-white/20 shadow-sm group"
-                           >
-                              <UserIcon size={18} className="group-hover:scale-110 transition-transform" />
-                              {selectedCustomer ? (
-                                 <span className="truncate max-w-[130px] sm:max-w-[200px]">{selectedCustomer.name}</span>
-                              ) : (
-                                 'Vincular Cliente (Opcional)'
-                              )}
-                           </button>
-
-                           <div className="hidden lg:flex flex-col items-end px-2">
-                              <span className="text-[10px] font-black opacity-70 uppercase">Operador</span>
-                              <span className="text-sm font-bold">{currentUser.name}</span>
-                           </div>
-                           <div className="h-10 w-[2px] bg-white/20"></div>
-                           <div className="px-5 py-2 bg-white/20 rounded-2xl text-xs font-black tracking-widest border border-white/20 backdrop-blur-sm">
-                              {cart.length} {cart.length === 1 ? 'ITEM' : 'ITENS'}
-                           </div>
-                        </div>
-                     </div>
-
-                     {/* Cart Area */}
-                     <div className="flex-1 overflow-y-auto p-3 md:p-6 space-y-2.5 bg-slate-50/30 scrollbar-thin scrollbar-thumb-orange-200">
-                        {cart.length === 0 ? (
-                           <div className="h-full flex flex-col items-center justify-center text-slate-300">
-                              <div className="relative mb-6">
-                                 <ShoppingCart size={120} strokeWidth={0.5} className="opacity-10" />
-                                 <div className="absolute inset-0 flex items-center justify-center">
-                                    <div className="w-16 h-16 bg-orange-100 rounded-full animate-ping opacity-20"></div>
-                                 </div>
-                              </div>
-                              <h3 className="text-2xl font-black text-slate-400 uppercase tracking-[0.2em]">O Caixa Está Vazio</h3>
-                              <p className="text-slate-400 font-bold mt-2">Use a barra superior para buscar produtos (F2)</p>
-                           </div>
-                        ) : (
-                           <div className="max-w-7xl mx-auto w-full space-y-3">
-                              {cart.map(item => (
-                                 <div key={`${item.product.id}-${item.negotiatedPrice}`} className="bg-white p-3 md:p-4 rounded-[1rem] border border-slate-100 shadow-sm flex items-center gap-4 hover:border-orange-300 hover:shadow-lg hover:-translate-y-0.5 transition-all group relative overflow-hidden">
-                                    {/* Decorative accent */}
-                                    <div className="absolute left-0 top-0 bottom-0 w-1.5 bg-orange-500 opacity-0 group-hover:opacity-100 transition-opacity"></div>
-
-                                    <div className="flex-1 min-w-0 pr-2">
-                                       <div className="flex items-center gap-2 mb-1 flex-wrap">
-                                          <span className="text-[9px] sm:text-[10px] font-black text-orange-500 bg-orange-50 px-2 py-0.5 rounded-full uppercase tracking-widest">{item.product.category}</span>
-                                          {item.isPack && <span className="text-[9px] sm:text-[10px] font-black text-purple-600 bg-purple-50 px-2 py-0.5 rounded-full uppercase tracking-widest">Fardo</span>}
-                                       </div>
-                                       <h4 className="font-black text-base sm:text-lg md:text-xl text-slate-900 leading-tight break-words">{item.product.name}</h4>
-                                       <p className="text-xs sm:text-sm md:text-base text-slate-500 font-bold tracking-tight mt-0.5">{formatCurrency(getProductPrice(item))} <span className="text-[10px] sm:text-xs opacity-60">por {item.product.unit}</span></p>
-                                    </div>
-
-                                    <div className="flex flex-col sm:flex-row items-end sm:items-center gap-2 sm:gap-4 bg-slate-100/50 p-2 rounded-2xl group-hover:bg-orange-50 transition-colors">
-                                       <div className="flex items-center">
-                                          <button
-                                             onClick={() => updateQuantity(item.product.id, -1, item.negotiatedPrice, item.isPack)}
-                                             className="w-10 h-10 sm:w-12 sm:h-12 flex items-center justify-center bg-white rounded-xl border border-slate-200 shadow-sm hover:text-orange-600 hover:border-orange-300 active:scale-90 transition-all font-black"
-                                          >
-                                             <Minus size={16} strokeWidth={3} className="sm:w-5 sm:h-5" />
-                                          </button>
-                                          <span className="w-10 sm:w-14 text-center font-black text-xl sm:text-3xl text-slate-900 tabular-nums">{item.quantity}</span>
-                                          <button
-                                             onClick={() => updateQuantity(item.product.id, 1, item.negotiatedPrice, item.isPack)}
-                                             className="w-10 h-10 sm:w-12 sm:h-12 flex items-center justify-center bg-orange-500 text-white rounded-xl shadow-[0_4px_12px_rgba(249,115,22,0.3)] hover:bg-orange-600 active:scale-95 transition-all font-black"
-                                          >
-                                             <Plus size={16} strokeWidth={3} className="sm:w-5 sm:h-5" />
-                                          </button>
-                                       </div>
-                                    </div>
-
-                                    <div className="text-right min-w-[90px] sm:min-w-[120px] md:min-w-[160px]">
-                                       <span className="text-[8px] sm:text-[9px] font-black text-slate-400 uppercase tracking-widest block mb-0.5">Subtotal</span>
-                                       <span className="font-black text-lg sm:text-xl md:text-3xl text-slate-900 tracking-tighter tabular-nums">
-                                          {formatCurrency(item.quantity * getProductPrice(item))}
-                                       </span>
-                                    </div>
-
-                                    <button
-                                       onClick={() => removeFromCart(item.product.id, item.negotiatedPrice, item.isPack)}
-                                       className="p-3 text-slate-300 hover:text-rose-500 hover:bg-rose-50 rounded-xl transition-all md:opacity-0 group-hover:opacity-100"
-                                       title="Remover do Carrinho"
-                                    >
-                                       <Trash2 size={20} />
-                                    </button>
-                                 </div>
-                              ))}
-                           </div>
-                        )}
-                     </div>
-
-                     {/* Compact Checkout Section */}
-                     <div className="p-3 md:px-5 md:py-3 bg-white border-t border-slate-200 shadow-[0_-5px_15px_rgba(0,0,0,0.05)] flex flex-col md:flex-row justify-between items-center gap-3 relative z-20 shrink-0">
-                        <div className="flex items-center justify-between w-full md:w-auto gap-4 md:gap-8">
-                           <div className="flex flex-col">
-                              <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-0.5">Total Bruto</span>
-                              <span className="text-base md:text-lg font-black text-slate-500 tracking-tighter tabular-nums decoration-slate-300 line-through opacity-60">{formatCurrency(subtotal)}</span>
-                           </div>
-
-                           <div className="flex flex-col">
-                              <span className="text-[10px] font-black text-orange-500 uppercase tracking-widest mb-0.5">Desconto (R$)</span>
-                              <div className="relative group">
-                                 <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-xs font-black text-orange-400">R$</span>
-                                 <input
-                                    type="number"
-                                    value={discount}
-                                    onChange={(e) => setDiscount(e.target.value)}
-                                    className="w-24 bg-orange-50/50 border border-orange-100 rounded-lg pl-7 pr-1.5 py-1 text-sm font-black text-orange-700 outline-none focus:ring-2 focus:ring-orange-200 focus:bg-white transition-all tabular-nums"
-                                    placeholder="0,00"
-                                 />
-                              </div>
-                           </div>
-                        </div>
-
-                        <div className="flex items-center justify-between w-full md:w-auto gap-4 mt-2 md:mt-0">
-                           <div className="flex flex-col items-start md:items-end flex-1 md:flex-none">
-                              <div className="flex items-center gap-1.5 mb-0.5">
-                                 <div className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse shadow-[0_0_10px_rgba(16,185,129,0.5)]"></div>
-                                 <span className="text-[9px] md:text-[10px] font-black text-slate-900 uppercase tracking-[0.2em]">A PAGAR</span>
-                              </div>
-                              <span className="text-3xl md:text-4xl xl:text-5xl font-black text-slate-900 tracking-tighter leading-none tabular-nums drop-shadow-sm">
-                                 {formatCurrency(cartTotal)}
-                              </span>
-                           </div>
-
-                           <button
-                              onClick={initiateCheckout}
-                              disabled={cart.length === 0}
-                              className="flex items-center justify-center px-5 py-3 md:px-6 md:py-3 bg-slate-900 text-white rounded-xl font-black text-base md:text-lg shadow-lg hover:bg-orange-500 hover:shadow-orange-500/30 active:scale-95 transition-all gap-2 group disabled:opacity-30 disabled:hover:scale-100 disabled:hover:bg-slate-900 shrink-0"
-                           >
-                              RECEBER <Send size={18} className="group-hover:translate-x-1 transition-transform" />
-                           </button>
-                        </div>
-                     </div>
-                  </div>
-               </div>
             </div>
          )}
 
