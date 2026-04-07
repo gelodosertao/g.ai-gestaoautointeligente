@@ -226,7 +226,12 @@ const Sales: React.FC<SalesProps> = ({ sales, products, customers, onAddSale, on
    // Price always uses varejo (Filial)
    const getProductPrice = (item: CartItem) => {
       if (item.negotiatedPrice !== undefined) return item.negotiatedPrice;
-      if (item.isPack && item.product.pricePack) return item.product.pricePack;
+
+      // Auto-Wholesale logic: if qty reaches packSize, apply pack price proportionally
+      if (item.product.packSize && item.product.pricePack && item.quantity >= item.product.packSize) {
+         return item.product.pricePack / item.product.packSize;
+      }
+
       return item.product.priceFilial;
    };
 
@@ -255,9 +260,6 @@ const Sales: React.FC<SalesProps> = ({ sales, products, customers, onAddSale, on
          setNegotiatedPrice(product.priceFilial.toString());
          setNegotiatedQty(1);
          setShowPriceModal(true);
-      } else if (product.packSize && product.pricePack) {
-         setPendingProduct(product);
-         setShowPackSelectionModal(true);
       } else {
          addToCart(product);
       }
@@ -842,29 +844,33 @@ const Sales: React.FC<SalesProps> = ({ sales, products, customers, onAddSale, on
                         </div>
                      ) : (
                         <div className="divide-y divide-slate-50">
-                           {cart.map(item => (
-                              <div key={`${item.product.id}-${item.negotiatedPrice}`} className="flex items-center gap-2 p-2 bg-white hover:bg-orange-50 group transition-colors">
-                                 <div className="w-10 h-10 rounded-lg overflow-hidden shrink-0 border border-slate-100 bg-white">
-                                    {item.product.image
-                                       ? <img src={item.product.image} alt={item.product.name} className="w-full h-full object-contain p-0.5" />
-                                       : <div className="w-full h-full flex items-center justify-center bg-slate-50"><Package size={16} className="text-slate-200" /></div>
-                                    }
-                                 </div>
-                                 <div className="flex-1 min-w-0">
-                                    <p className="text-[10px] font-black text-slate-800 truncate leading-none uppercase">{item.product.name}</p>
-                                    <p className="text-[9px] text-slate-400 font-bold mt-1 line-clamp-1">
-                                       {formatCurrency(getProductPrice(item))} × {item.quantity}
-                                    </p>
-                                 </div>
-                                 <div className="flex flex-col items-end gap-1">
-                                    <span className="text-[10px] font-black text-slate-900 tabular-nums">{formatCurrency(item.quantity * getProductPrice(item))}</span>
-                                    <div className="flex gap-1">
-                                       <button onClick={() => updateQuantity(item.product.id, -1, item.negotiatedPrice, item.isPack)} className="w-5 h-5 flex items-center justify-center bg-slate-100 rounded text-xs font-black text-slate-500 hover:bg-red-50 hover:text-red-600 transition-colors">−</button>
-                                       <button onClick={() => updateQuantity(item.product.id, 1, item.negotiatedPrice, item.isPack)} className="w-5 h-5 flex items-center justify-center bg-orange-500 rounded text-xs font-black text-white hover:bg-orange-600 transition-colors shadow-sm shadow-orange-500/20">+</button>
+                           {cart.map(item => {
+                              const isPackPriceApplied = item.product.packSize && item.product.pricePack && item.quantity >= item.product.packSize;
+                              return (
+                                 <div key={`${item.product.id}-${item.negotiatedPrice}`} className="flex items-center gap-2 p-2 bg-white hover:bg-orange-50 group transition-colors">
+                                    <div className="w-10 h-10 rounded-lg overflow-hidden shrink-0 border border-slate-100 bg-white">
+                                       {item.product.image
+                                          ? <img src={item.product.image} alt={item.product.name} className="w-full h-full object-contain p-0.5" />
+                                          : <div className="w-full h-full flex items-center justify-center bg-slate-50"><Package size={16} className="text-slate-200" /></div>
+                                       }
+                                    </div>
+                                    <div className="flex-1 min-w-0">
+                                       <p className="text-[10px] font-black text-slate-800 truncate leading-none uppercase">{item.product.name}</p>
+                                       <p className="text-[9px] text-slate-400 font-bold mt-1 line-clamp-1">
+                                          {formatCurrency(getProductPrice(item))} × {item.quantity}
+                                          {isPackPriceApplied && <span className="ml-1 text-purple-600">(Preço Fardo)</span>}
+                                       </p>
+                                    </div>
+                                    <div className="flex flex-col items-end gap-1">
+                                       <span className="text-[10px] font-black text-slate-900 tabular-nums">{formatCurrency(item.quantity * getProductPrice(item))}</span>
+                                       <div className="flex gap-1">
+                                          <button onClick={() => updateQuantity(item.product.id, -1, item.negotiatedPrice, item.isPack)} className="w-5 h-5 flex items-center justify-center bg-slate-100 rounded text-xs font-black text-slate-500 hover:bg-red-50 hover:text-red-600 transition-colors">−</button>
+                                          <button onClick={() => updateQuantity(item.product.id, 1, item.negotiatedPrice, item.isPack)} className="w-5 h-5 flex items-center justify-center bg-orange-500 rounded text-xs font-black text-white hover:bg-orange-600 transition-colors shadow-sm shadow-orange-500/20">+</button>
+                                       </div>
                                     </div>
                                  </div>
-                              </div>
-                           ))}
+                              );
+                           })}
                         </div>
                      )}
                   </div>
@@ -904,16 +910,10 @@ const Sales: React.FC<SalesProps> = ({ sales, products, customers, onAddSale, on
                               const stock = getProductStock(product);
                               const outOfStock = (product.isStockControlled !== false) && stock <= 0;
                               return (
-                                 <button key={product.id} onClick={() => !outOfStock && handleProductClick(product)} disabled={outOfStock} className={`group relative flex flex-col bg-white rounded-xl overflow-hidden border-2 transition-all shadow-sm aspect-square ${outOfStock ? 'opacity-40 border-slate-100 flex-none' : inCart ? 'border-orange-500 shadow-orange-500/20 scale-105 z-10' : 'border-white hover:border-orange-300 hover:shadow-md'}`}>
-                                    <div className="flex-1 w-full p-2 flex items-center justify-center relative bg-white">
-                                       {product.image
-                                          ? <img src={product.image} alt={product.name} className="w-full h-full object-contain group-hover:scale-110 transition-transform duration-500" />
-                                          : <Package size={40} className="text-slate-50" />
-                                       }
-                                       {/* Preço Sobreposto no Topo-Direito (Estilo Referência) */}
-                                       <div className="absolute top-0 right-0 bg-white/95 px-2 py-0.5 rounded-bl-lg border-l border-b border-slate-100 shadow-sm">
-                                          <span className="text-[10px] font-black text-slate-800 tabular-nums">{formatCurrency(product.priceFilial)}</span>
-                                       </div>
+                                 <button key={product.id} onClick={() => !outOfStock && handleProductClick(product)} disabled={outOfStock} className={`group relative flex flex-col bg-white rounded-lg overflow-hidden border transition-all ${outOfStock ? 'opacity-40 border-slate-100' : inCart ? 'border-orange-500 bg-orange-50 shadow-sm' : 'border-slate-200 hover:border-orange-400 hover:shadow-sm'}`}>
+                                    <div className="flex-1 w-full p-2 flex flex-col items-center justify-center text-center h-20">
+                                       <p className="text-[9px] font-black text-slate-800 uppercase leading-none mb-1">{product.name}</p>
+                                       <span className="text-[10px] font-black text-orange-600 tabular-nums">{formatCurrency(product.priceFilial)}</span>
                                        {inCart && (
                                           <div className="absolute top-1 left-1 w-6 h-6 bg-orange-500 text-white rounded-full flex items-center justify-center text-[11px] font-black shadow-lg animate-in zoom-in duration-300">{inCart.quantity}</div>
                                        )}
@@ -921,10 +921,7 @@ const Sales: React.FC<SalesProps> = ({ sales, products, customers, onAddSale, on
                                           <div className="absolute inset-0 bg-slate-50/80 flex items-center justify-center uppercase text-[10px] font-black text-slate-400">Sem Estoque</div>
                                        )}
                                     </div>
-                                    {/* Nome do Produto no Rodapé Compacto */}
-                                    <div className="bg-slate-50 border-t border-slate-100 py-2 px-1.5 h-10 flex items-center justify-center overflow-hidden">
-                                       <p className="text-[9px] font-black text-slate-600 line-clamp-2 uppercase text-center leading-tight tracking-tighter">{product.name}</p>
-                                    </div>
+
                                  </button>
                               );
                            })}
@@ -1880,3 +1877,4 @@ const Sales: React.FC<SalesProps> = ({ sales, products, customers, onAddSale, on
 };
 
 export default Sales;
+
