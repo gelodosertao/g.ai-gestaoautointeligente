@@ -865,7 +865,17 @@ const Sales: React.FC<SalesProps> = ({ sales, products, customers, onAddSale, on
                                        <span className="text-[10px] font-black text-slate-900 tabular-nums">{formatCurrency(item.quantity * getProductPrice(item))}</span>
                                        <div className="flex gap-1">
                                           <button onClick={() => updateQuantity(item.product.id, -1, item.negotiatedPrice, item.isPack)} className="w-5 h-5 flex items-center justify-center bg-slate-100 rounded text-xs font-black text-slate-500 hover:bg-red-50 hover:text-red-600 transition-colors">−</button>
-                                          <button onClick={() => updateQuantity(item.product.id, 1, item.negotiatedPrice, item.isPack)} className="w-5 h-5 flex items-center justify-center bg-orange-500 rounded text-xs font-black text-white hover:bg-orange-600 transition-colors shadow-sm shadow-orange-500/20">+</button>
+                                          <input
+                                             type="number"
+                                             className="w-10 h-5 text-[11px] font-black text-center border border-slate-200 rounded focus:ring-1 focus:ring-orange-500 outline-none bg-orange-50/50"
+                                             value={item.quantity}
+                                             onChange={(e) => {
+                                                const val = parseFloat(e.target.value) || 0;
+                                                const delta = val - item.quantity;
+                                                updateQuantity(item.product.id, delta, item.negotiatedPrice, item.isPack);
+                                             }}
+                                          />
+                                          <button onClick={() => updateQuantity(item.product.id, 1, item.negotiatedPrice, item.isPack)} className="w-5 h-5 flex items-center justify-center bg-orange-500 rounded text-xs font-black text-white hover:bg-orange-600 transition-all shadow-sm shadow-orange-500/20">+</button>
                                        </div>
                                     </div>
                                  </div>
@@ -904,7 +914,7 @@ const Sales: React.FC<SalesProps> = ({ sales, products, customers, onAddSale, on
                            <p className="text-xs font-black text-slate-400 uppercase tracking-[0.2em]">Nenhum produto em {posCategoryFilter}</p>
                         </div>
                      ) : (
-                        <div className="grid grid-cols-2 xs:grid-cols-3 sm:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 2xl:grid-cols-8 gap-3">
+                        <div className="grid grid-cols-2 gap-3 pb-4">
                            {filteredPosProducts.map(product => {
                               const inCart = cart.find(c => c.product.id === product.id);
                               const stock = getProductStock(product);
@@ -912,8 +922,8 @@ const Sales: React.FC<SalesProps> = ({ sales, products, customers, onAddSale, on
                               return (
                                  <button key={product.id} onClick={() => !outOfStock && handleProductClick(product)} disabled={outOfStock} className={`group relative flex flex-col bg-white rounded-lg overflow-hidden border transition-all ${outOfStock ? 'opacity-40 border-slate-100' : inCart ? 'border-orange-500 bg-orange-50 shadow-sm' : 'border-slate-200 hover:border-orange-400 hover:shadow-sm'}`}>
                                     <div className="flex-1 w-full p-2 flex flex-col items-center justify-center text-center h-20">
-                                       <p className="text-[9px] font-black text-slate-800 uppercase leading-none mb-1">{product.name}</p>
-                                       <span className="text-[10px] font-black text-orange-600 tabular-nums">{formatCurrency(product.priceFilial)}</span>
+                                       <p className="text-[11px] font-black text-slate-800 uppercase leading-tight mb-2 text-center px-1">{product.name}</p>
+                                       <span className="text-sm font-black text-orange-600 tabular-nums">{formatCurrency(product.priceFilial)}</span>
                                        {inCart && (
                                           <div className="absolute top-1 left-1 w-6 h-6 bg-orange-500 text-white rounded-full flex items-center justify-center text-[11px] font-black shadow-lg animate-in zoom-in duration-300">{inCart.quantity}</div>
                                        )}
