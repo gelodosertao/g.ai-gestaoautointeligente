@@ -1,8 +1,8 @@
 import type { CapacitorConfig } from '@capacitor/cli';
 
 const config: CapacitorConfig = {
-  appId: 'com.gelodosertao.app',
-  appName: 'Gelo do Sertão',
+  appId: 'com.gestaoautointeligente.gai',
+  appName: 'G.AI',
   webDir: 'dist',
   plugins: {
     Keyboard: {

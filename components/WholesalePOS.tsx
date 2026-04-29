@@ -379,7 +379,7 @@ const WholesalePOS: React.FC<WholesalePOSProps> = ({
                             await navigator.share({
                                 files: [file],
                                 title: 'Recibo Atacado',
-                                text: 'Cupom de Pedido Gelo do Sertão',
+                                text: 'Pedido via G.AI - Gestão Auto Inteligente',
                             });
                         } catch (err) {
                             console.log('Share cancelado ou falhou, tentando download...', err);
@@ -1277,7 +1277,7 @@ const WholesalePOS: React.FC<WholesalePOSProps> = ({
 
                 {/* Header Section */}
                 <div style={{ paddingBottom: '15px' }}>
-                    <p style={{ fontSize: '24px', fontWeight: 900, margin: 0, textTransform: 'uppercase', letterSpacing: '2px' }}>Gelo do Sertão</p>
+                    <p style={{ fontSize: '24px', fontWeight: 900, margin: 0, textTransform: 'uppercase', letterSpacing: '2px' }}>G.AI</p>
                     <p style={{ fontSize: '11px', margin: '5px 0 0', fontWeight: 700, color: '#333' }}>CNPJ: 47.026.674/0001-29</p>
                     <p style={{ fontSize: '11px', margin: '2px 0 0', color: '#666' }}>Ibotirama - BA</p>
                 </div>
@@ -1348,7 +1348,7 @@ const WholesalePOS: React.FC<WholesalePOSProps> = ({
                 {/* Footer Section */}
                 <div>
                     <p style={{ fontSize: '14px', fontWeight: 800, margin: 0 }}>Obrigado pela preferência!</p>
-                    <p style={{ fontSize: '10px', margin: '6px 0 0', color: '#64748b', fontStyle: 'italic' }}>Gelo do Sertão · Gestão Inteligente</p>
+                    <p style={{ fontSize: '10px', margin: '6px 0 0', color: '#64748b', fontStyle: 'italic' }}>G.AI · Gestão Auto Inteligente</p>
                 </div>
             </div>
 

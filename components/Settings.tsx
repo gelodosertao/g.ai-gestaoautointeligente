@@ -137,15 +137,15 @@ const Settings: React.FC<SettingsProps> = ({ currentUser, onResetData }) => {
 
    const handleDownloadBackup = () => {
       const data = {
-         products: localStorage.getItem('gelo_products'),
-         sales: localStorage.getItem('gelo_sales'),
-         financials: localStorage.getItem('gelo_financials'),
+         products: localStorage.getItem('gai_products'),
+         sales: localStorage.getItem('gai_sales'),
+         financials: localStorage.getItem('gai_financials'),
          timestamp: new Date().toISOString()
       };
-      const jsonString = `data:text/json;chatset=utf-8,${encodeURIComponent(JSON.stringify(data, null, 2))}`;
+      const jsonString = `data:text/json;charset=utf-8,${encodeURIComponent(JSON.stringify(data, null, 2))}`;
       const link = document.createElement("a");
       link.href = jsonString;
-      link.download = `backup_gelo_do_sertao_${getTodayDate()}.json`;
+      link.download = `backup_gai_${getTodayDate()}.json`;
       link.click();
    };
 

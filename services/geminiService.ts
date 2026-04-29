@@ -22,7 +22,7 @@ export const getBusinessAnalysis = async (
   ).join('\n');
 
   const prompt = `
-    Você é um assistente sênior de gestão para a empresa "Gelo do Sertão", que possui uma fábrica de gelo (Matriz) e uma adega (Filial).
+    Você é o G.AI, um assistente inteligente de gestão para fábricas de gelo. Você ajuda o gestor a analisar estoque, vendas e financeiro. Responda de forma estratégica.
     
     Dados atuais do negócio:
     

@@ -1381,7 +1381,7 @@ const Sales: React.FC<SalesProps> = ({ sales, products, customers, onAddSale, on
                                  <div id="receipt-content" className="bg-yellow-50 border border-yellow-100 p-2 px-[2mm] rounded-none font-mono text-[10px] text-black mb-6 shadow-inner overflow-hidden mx-auto w-[40mm] shrink-0">
                                     <div className="text-center mb-4 border-b border-yellow-200 pb-4">
                                        <h2 className="font-bold text-[11px] uppercase leading-tight whitespace-pre-wrap">
-                                          {selectedBranch === Branch.FILIAL ? 'Gelo do Sertão |\nAdega & Drinks' : 'Gelo do Sertão Ltda'}
+                                          {selectedBranch === Branch.FILIAL ? 'G.AI | Adega & Drinks' : 'G.AI - Gestão Inteligente'}
                                        </h2>
                                        <p>CNPJ: 00.000.000/0001-00</p>
                                        <p>Unidade: {selectedBranch}</p>
@@ -1759,7 +1759,7 @@ const Sales: React.FC<SalesProps> = ({ sales, products, customers, onAddSale, on
                   <div id="printable-receipt-content" className="p-1 px-[2mm] bg-white w-[40mm] mx-auto text-[10px] font-mono text-black">
                      <div className="text-center mb-2 border-b border-black pb-2">
                         <h2 className="font-bold text-[11px] uppercase leading-tight whitespace-pre-wrap">
-                           {(lastCompletedSale || selectedSaleForInvoice || saleToDownload)?.branch === Branch.FILIAL ? 'Gelo do Sertão |\nAdega & Drinks' : 'Gelo do Sertão Ltda'}
+                           {(lastCompletedSale || selectedSaleForInvoice || saleToDownload)?.branch === Branch.FILIAL ? 'G.AI | Adega & Drinks' : 'G.AI - Gestão Inteligente'}
                         </h2>
                         <p>CNPJ: 00.000.000/0001-00</p>
                         <p>{(lastCompletedSale || selectedSaleForInvoice || saleToDownload)?.branch}</p>
@@ -1891,7 +1891,7 @@ const Sales: React.FC<SalesProps> = ({ sales, products, customers, onAddSale, on
                lastCompletedSale && (
                   <div id="receipt-content" className="fixed top-0 left-0 -z-50 opacity-0 pointer-events-none bg-white p-2 text-black font-mono text-[10px] w-[300px]" style={{ fontFamily: '"Courier New", Courier, monospace' }}>
                      <div className="text-center border-b border-black pb-2 mb-2">
-                        <h2 className="font-bold text-sm uppercase">Gelo do Sertão</h2>
+                        <h2 className="font-bold text-sm uppercase">G.AI - Gestão Auto Inteligente</h2>
                         <p>CNPJ: 00.000.000/0001-00</p>
                         <p>Rua Exemplo, 123 - Centro</p>
                         <p>Tel: (77) 99999-9999</p>

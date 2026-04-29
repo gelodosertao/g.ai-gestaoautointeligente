@@ -4,7 +4,7 @@ export const MOCK_USERS: User[] = [
   {
     id: 'u1',
     name: 'João Pedro',
-    email: 'admin@gelodosertao.com',
+    email: 'admin@gestaoautointeligente.com',
     role: 'ADMIN',
     avatarInitials: 'JP',
     tenantId: '00000000-0000-0000-0000-000000000000'
@@ -12,7 +12,7 @@ export const MOCK_USERS: User[] = [
   {
     id: 'u2',
     name: 'Operador Caixa',
-    email: 'caixa@gelodosertao.com',
+    email: 'caixa@gestaoautointeligente.com',
     role: 'OPERATOR',
     avatarInitials: 'CX',
     tenantId: '00000000-0000-0000-0000-000000000000'

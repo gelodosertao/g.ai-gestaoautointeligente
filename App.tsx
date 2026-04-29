@@ -724,13 +724,13 @@ const App: React.FC = () => {
                         >
                           <Menu size={24} />
                         </button>
-                        <span className="ml-3 text-slate-900 font-black text-sm tracking-[0.2em] uppercase">GELO DO SERTÃO</span>
+                        <span className="ml-3 text-slate-900 font-black text-sm tracking-[0.2em] uppercase text-gai-navy">G.AI</span>
                         {isNative && (
                           <span className="ml-2 px-1.5 py-0.5 bg-blue-100 text-blue-700 text-[10px] font-bold rounded uppercase">App</span>
                         )}
                       </div>
-                      <div className="bg-orange-500 w-8 h-8 rounded-lg flex items-center justify-center text-white font-black text-xs shadow-lg shadow-orange-500/20">
-                        GS
+                      <div className="bg-gai-teal w-8 h-8 rounded-lg flex items-center justify-center text-white font-black text-xs shadow-lg shadow-teal-500/20">
+                        G
                       </div>
                     </div>
                   </div>
