@@ -102,14 +102,14 @@ const Login: React.FC<LoginProps> = ({ onLogin, onOpenMenu }) => {
       <div className="max-w-md w-full bg-white rounded-2xl shadow-xl overflow-hidden flex flex-col animate-in fade-in zoom-in-95 duration-500 border border-slate-200">
 
         {/* Header Visual */}
-        <div className="bg-blue-950 p-8 text-center relative overflow-hidden flex flex-col items-center">
+        <div className="bg-gai-navy p-8 text-center relative overflow-hidden flex flex-col items-center">
 
-          <div className="absolute -right-10 -top-10 text-orange-500/10">
+          <div className="absolute -right-10 -top-10 text-gai-teal/10">
             <Sun size={200} />
           </div>
 
           <div className="transform scale-90 md:scale-100 mb-2 filter drop-shadow-2xl">
-            <img src="/logo.png" alt="Gelo do Sertão" className="h-40 w-auto object-contain" />
+            <img src="/logo.png" alt="G.AI - Gestão Auto Inteligente" className="h-40 w-auto object-contain" />
           </div>
 
           <p className="text-blue-200 text-xs mt-4 font-medium tracking-wider uppercase opacity-80 relative z-20">
@@ -164,7 +164,7 @@ const Login: React.FC<LoginProps> = ({ onLogin, onOpenMenu }) => {
                   <option value="WHOLESALE_REPRESENTATIVE">Representante (Vendas Atacado)</option>
                 </select>
               </div>
-              <button type="submit" disabled={loading} className="w-full bg-orange-500 hover:bg-orange-600 text-white py-3 rounded-xl font-bold text-lg shadow-lg shadow-orange-900/20 transition-all mt-4 flex justify-center">
+              <button type="submit" disabled={loading} className="w-full bg-gai-teal hover:bg-gai-teal-light text-white py-3 rounded-xl font-bold text-lg shadow-lg shadow-teal-900/20 transition-all mt-4 flex justify-center">
                 {loading ? <Loader2 className="animate-spin" /> : 'Criar Conta'}
               </button>
               <button type="button" onClick={() => setIsRegistering(false)} className="w-full text-slate-500 hover:text-slate-700 py-2 font-medium flex items-center justify-center gap-2">
@@ -193,7 +193,7 @@ const Login: React.FC<LoginProps> = ({ onLogin, onOpenMenu }) => {
               <button
                 type="submit"
                 disabled={loading}
-                className="w-full bg-blue-700 hover:bg-blue-600 text-white py-3 rounded-xl font-bold text-lg shadow-lg shadow-blue-900/20 transition-all flex items-center justify-center gap-2 disabled:opacity-70 disabled:cursor-not-allowed group"
+                className="w-full bg-gai-teal hover:bg-gai-teal-light text-white py-3 rounded-xl font-bold text-lg shadow-lg shadow-teal-900/20 transition-all flex items-center justify-center gap-2 disabled:opacity-70 disabled:cursor-not-allowed group"
               >
                 {loading ? <Loader2 className="animate-spin" /> : <>Entrar <ArrowRight size={20} className="group-hover:translate-x-1 transition-transform" /></>}
               </button>

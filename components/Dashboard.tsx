@@ -303,7 +303,7 @@ const Dashboard: React.FC<DashboardProps> = ({ products, sales, financials, cust
               {isValuesVisible ? <Eye size={20} /> : <EyeOff size={20} />}
             </button>
           </div>
-          <p className="text-slate-500">Acompanhe o desempenho da Gelo do Sertão em tempo real.</p>
+          <p className="text-slate-500">Acompanhe o desempenho do seu negócio em tempo real com G.AI.</p>
         </div>
 
         <div className="flex flex-col md:flex-row gap-2 w-full md:w-auto">
@@ -505,7 +505,7 @@ const Dashboard: React.FC<DashboardProps> = ({ products, sales, financials, cust
                     <TrendingUp size={24} />
                   </div>
                   <div>
-                    <h3 className="font-bold text-lg leading-tight">Gelo do Sertão - BI Corporativo</h3>
+                    <h3 className="font-bold text-lg leading-tight">G.AI - BI Corporativo</h3>
                     <p className="text-xs font-medium opacity-80">Atualizado: Agora mesmo</p>
                   </div>
                 </div>
@@ -642,7 +642,7 @@ const Dashboard: React.FC<DashboardProps> = ({ products, sales, financials, cust
                 </div>
               </div>
               <div className="bg-slate-50 border-t border-slate-200 p-2 flex justify-center text-xs text-slate-400">
-                Power BI Embedded Simulation • Gelo do Sertão © 2023
+                Power BI Embedded Simulation • G.AI © 2025
               </div>
             </div>
           </div>

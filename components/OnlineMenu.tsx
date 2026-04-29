@@ -1197,7 +1197,7 @@ const OnlineMenu: React.FC<OnlineMenuProps> = ({ onBack }) => {
 
                     <div className="flex flex-col items-center gap-1.5 mb-2">
                         <h1 className="font-extrabold text-2xl tracking-tight text-slate-900 drop-shadow-sm">
-                            {settings?.storeName || 'Gelo do Sertão'}
+                            {settings?.storeName || 'G.AI'}
                         </h1>
 
                         <div className="flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-widest text-slate-400">

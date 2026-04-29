@@ -51,7 +51,7 @@ const MenuConfig: React.FC<MenuConfigProps> = ({ onBack, tenantId }) => {
                 // Defaults
                 setSettings({
                     id: 'default',
-                    storeName: 'Gelo do Sertão',
+                    storeName: 'G.AI',
                     phone: '5577998129383',
                     address: '',
                     openingHours: 'Seg-Sex: 08:00 - 18:00',

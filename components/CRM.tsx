@@ -191,8 +191,8 @@ interface SendEmailModalProps {
 }
 
 const SendEmailModal: React.FC<SendEmailModalProps> = ({ lead, onSend, onClose }) => {
-    const [subject, setSubject] = useState(`Apresentação Gelo do Sertão para ${lead.name}`);
-    const [body, setBody] = useState(`Olá ${lead.name},\n\nTudo bem?\n\nMeu nome é [Seu Nome], falo em nome da Gelo do Sertão...\n\nQualquer dúvida, estou à disposição!\n\nAtenciosamente,\nEquipe Gelo do Sertão`);
+    const [subject, setSubject] = useState(`Apresentação G.AI para ${lead.name}`);
+    const [body, setBody] = useState(`Olá ${lead.name},\n\nTudo bem?\n\nMeu nome é [Seu Nome], falo em nome da G.AI - Gestão Auto Inteligente...\n\nQualquer dúvida, estou à disposição!\n\nAtenciosamente,\nEquipe G.AI`);
     const [sending, setSending] = useState(false);
 
     const handleSubmit = async (e: React.FormEvent) => {

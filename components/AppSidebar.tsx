@@ -90,7 +90,7 @@ const AppSidebar: React.FC<AppSidebarProps> = ({ currentView, setView, currentUs
             <div className={`relative z-10 w-full h-full flex items-center justify-center select-none duration-500`}>
               <img
                 src="/logo.png"
-                alt="Gelo do Sertão"
+                alt="G.AI - Gestão Auto Inteligente"
                 className={`object-contain transition-all duration-500 drop-shadow-sm ${isCollapsed ? 'max-h-[66px] max-w-[90%] w-auto' : 'max-h-32 w-auto'}`}
               />
             </div>
@@ -100,7 +100,7 @@ const AppSidebar: React.FC<AppSidebarProps> = ({ currentView, setView, currentUs
           {!isCollapsed && (
             <div className="w-full pt-4 pb-2 text-center animate-in slide-in-from-top-2 duration-700">
               <p className="text-[10px] font-black text-gai-tech tracking-[0.3em] uppercase opacity-90 leading-none">
-                GELO DO SERTÃO
+                G.AI
               </p>
             </div>
           )}

@@ -407,10 +407,10 @@ const OrderCenter: React.FC<OrderCenterProps> = ({ onBack, tenantId }) => {
                                                                 <span>Subtotal</span>
                                                                 <span>{order.total.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</span>
                                                             </div>
-                                                            {order.deliveryFee > 0 && (
+                                                            {(order.deliveryFee || 0) > 0 && (
                                                                 <div className="flex justify-between items-center text-xs text-slate-500 font-medium">
                                                                     <span>Taxa de Entrega</span>
-                                                                    <span>{order.deliveryFee.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</span>
+                                                                    <span>{(order.deliveryFee || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</span>
                                                                 </div>
                                                             )}
                                                             <div className="flex justify-between items-center pt-1 border-t border-slate-100 italic">
@@ -486,7 +486,7 @@ const OrderCenter: React.FC<OrderCenterProps> = ({ onBack, tenantId }) => {
                     <div id="printable-order-receipt-content" className="p-1 px-[2mm] bg-white w-[40mm] mx-auto text-[10px] font-mono text-black">
                         <div className="text-center mb-2 border-b border-black pb-2">
                             <h2 className="font-bold text-[11px] uppercase leading-tight whitespace-pre-wrap">
-                                {orderToPrint.branch === Branch.FILIAL ? 'Gelo do Sertão |\nAdega & Drinks' : 'GELO DO SERTÃO'}
+                                {orderToPrint.branch === Branch.FILIAL ? 'G.AI |\nFilial' : 'G.AI'}
                             </h2>
                             <p className="font-bold border-t border-dashed border-black mt-1 pt-1">PEDIDO #{orderToPrint.id.split('-')[0].toUpperCase()}</p>
                             <p>{new Date(orderToPrint.createdAt).toLocaleString('pt-BR')}</p>
