@@ -2,6 +2,7 @@ import React, { useState, useEffect, Suspense, useMemo } from 'react';
 import { Routes, Route, Navigate, useNavigate, useLocation } from 'react-router-dom';
 import { ViewState, User, Product, Sale, FinancialRecord, Branch, Customer, CashClosing } from './types';
 import { dbProducts, dbSales, dbFinancials, dbCustomers, dbCashClosings, dbUsers } from './services/db';
+import { useAuth } from './contexts/AuthContext';
 import { useQuery } from '@tanstack/react-query';
 import { Loader2, AlertCircle, Menu } from 'lucide-react';
 import { usePlatform } from './hooks/usePlatform';
@@ -31,7 +32,7 @@ const VisitorLanding = React.lazy(() => import('./components/VisitorLanding'));
 const App: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
-  const [currentUser, setCurrentUser] = useState<User | null>(null);
+  const { currentUser, isLoading: authLoading, logout } = useAuth();
   const { isNative } = usePlatform();
   const { isActive } = useAppLifecycle();
 
@@ -93,31 +94,26 @@ const App: React.FC = () => {
 
   const [pricingProductId, setPricingProductId] = useState<string | null>(null);
 
-  // --- AUTH & INITIAL DATA ---
+  // --- INITIAL DATA & NAVIGATION ---
   useEffect(() => {
     const isMenuMode = location.pathname === '/cardapio-adega';
 
-    // Check for active session on load
-    dbUsers.getCurrentUser().then(user => {
-      if (user) {
-        setCurrentUser(user);
-
-        // Only navigate if NOT in menu mode and currently at root or login
-        if (!isMenuMode && (location.pathname === '/' || location.pathname === '/login')) {
-          let initialView: ViewState = 'DASHBOARD';
-          if (user.role === 'WHOLESALE_REPRESENTATIVE' || (user.role as string) === 'WHOLESALE_SUPERVISOR') {
-            initialView = 'WHOLESALE_POS';
-          } else if (user.allowedModules && user.allowedModules.length > 0) {
-            initialView = user.allowedModules[0] as ViewState;
-          } else {
-            if (user.role === 'FACTORY') initialView = 'PRODUCTION';
-            else if (user.role === 'OPERATOR') initialView = 'SALES';
-          }
-          setCurrentView(initialView);
+    if (currentUser) {
+      // Only navigate if NOT in menu mode and currently at root or login
+      if (!isMenuMode && (location.pathname === '/' || location.pathname === '/login')) {
+        let initialView: ViewState = 'DASHBOARD';
+        if (currentUser.role === 'WHOLESALE_REPRESENTATIVE' || (currentUser.role as string) === 'WHOLESALE_SUPERVISOR') {
+          initialView = 'WHOLESALE_POS';
+        } else if (currentUser.allowedModules && currentUser.allowedModules.length > 0) {
+          initialView = currentUser.allowedModules[0] as ViewState;
+        } else {
+          if (currentUser.role === 'FACTORY') initialView = 'PRODUCTION';
+          else if (currentUser.role === 'OPERATOR') initialView = 'SALES';
         }
+        setCurrentView(initialView);
       }
-    });
-  }, []);
+    }
+  }, [currentUser, location.pathname]);
 
   const tenantId = currentUser?.tenantId || '00000000-0000-0000-0000-000000000000';
 
@@ -539,24 +535,8 @@ const App: React.FC = () => {
     alert("Para resetar o banco de dados Supabase, utilize o editor SQL no painel do Supabase (Comando TRUNCATE).");
   };
 
-  const handleLogin = (user: User) => {
-    setCurrentUser(user);
-    let initialView: ViewState = 'DASHBOARD';
-    // Compatibilidade: Aceitar tanto a nova role quanto a antiga para redirecionamento
-    if (user.role === 'WHOLESALE_REPRESENTATIVE' || (user.role as string) === 'WHOLESALE_SUPERVISOR') {
-      initialView = 'WHOLESALE_POS';
-    } else if (user.allowedModules && user.allowedModules.length > 0) {
-      initialView = user.allowedModules[0] as ViewState;
-    } else {
-      if (user.role === 'FACTORY') initialView = 'PRODUCTION';
-      else if (user.role === 'OPERATOR') initialView = 'SALES';
-    }
-    setCurrentView(initialView);
-  };
-
   const handleLogout = async () => {
-    await dbUsers.logout();
-    setCurrentUser(null);
+    await logout();
     setProducts([]);
     setSales([]);
     setFinancials([]);
@@ -566,11 +546,11 @@ const App: React.FC = () => {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   const renderContent = () => {
-    if (isLoading) {
+    if (isLoading || authLoading) {
       return (
-        <div className="bg-gai-navy p-10 text-center relative overflow-hidden flex flex-col items-center justify-center text-slate-500 gap-4">
+        <div className="bg-gai-navy p-10 text-center relative overflow-hidden flex flex-col items-center justify-center text-slate-500 gap-4 h-full min-h-[50vh]">
           <Loader2 size={48} className="animate-spin text-orange-500" />
-          <p>Sincronizando dados com a Nuvem...</p>
+          <p>{authLoading ? 'Verificando sessão segura...' : 'Sincronizando dados com a Nuvem...'}</p>
         </div>
       );
     }
@@ -665,7 +645,7 @@ const App: React.FC = () => {
       <Route path="/login" element={
         !currentUser ? (
           <Suspense fallback={<div className="h-dvh w-screen flex items-center justify-center bg-blue-900"><Loader2 size={48} className="animate-spin text-white" /></div>}>
-            <Login onLogin={handleLogin} onOpenMenu={() => navigate('/cardapio-adega')} />
+            <Login onOpenMenu={() => navigate('/cardapio-adega')} />
           </Suspense>
         ) : <Navigate to="/gestao" replace />
       } />

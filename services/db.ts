@@ -30,7 +30,7 @@ const fetchAllRecords = async (getQuery: (from: number, to: number) => any) => {
 // --- USERS & AUTH ---
 
 export const dbUsers = {
-  async login(email: string, password: string): Promise<User> {
+  async login(email: string, password: string): Promise<void> {
     // 1. Logar usando o Auth Oficial do Supabase
     const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
       email,
@@ -41,35 +41,6 @@ export const dbUsers = {
       console.error("Auth erro:", authError);
       throw new Error('Usuário não encontrado ou senha incorreta.');
     }
-
-    // 2. Com a sessão gerada e protegida (JWT em mãos), puxar o perfil do usuário e a Empresa
-    const { data: user, error } = await supabase
-      .from('app_users')
-      .select(`
-        *,
-        tenants (name)
-      `)
-      .eq('id', authData.user.id)
-      .single();
-
-    if (error || !user) {
-      throw new Error('Perfil de usuário não localizado no sistema.');
-    }
-
-    // 3. Save to LocalStorage (Simple Session)
-    const sessionUser: User = {
-      id: user.id,
-      name: user.name,
-      email: user.email,
-      role: user.role as Role,
-      avatarInitials: user.avatar_initials,
-      tenantId: user.tenant_id || '00000000-0000-0000-0000-000000000000',
-      tenantName: user.tenants?.name || 'G.AI Gestão',
-      allowedModules: user.allowed_modules
-    };
-    localStorage.setItem('app_user', JSON.stringify(sessionUser));
-
-    return sessionUser;
   },
 
   async register(user: { name: string, email: string, password: string, role: Role, allowedModules?: string[] }, existingTenantId?: string): Promise<User> {
@@ -153,7 +124,6 @@ export const dbUsers = {
     }
 
     if (!existingTenantId) {
-      localStorage.setItem('app_user', JSON.stringify(sessionUser));
       // Precisamos avisar o client atual do Supabase caso seja auto-registro sem ser admin
       await supabase.auth.signInWithPassword({ email: user.email, password: user.password });
     }
@@ -162,35 +132,7 @@ export const dbUsers = {
   },
 
   async logout(): Promise<void> {
-    localStorage.removeItem('app_user');
-    // Also sign out from Supabase just in case
     await supabase.auth.signOut();
-  },
-
-  async getCurrentUser(): Promise<User | null> {
-    try {
-      // Verify with Supabase Auth to ensure session is still valid
-      const { data: { session }, error } = await supabase.auth.getSession();
-
-      if (error || !session) {
-        localStorage.removeItem('app_user');
-        return null;
-      }
-
-      // Check LocalStorage cache 
-      const stored = localStorage.getItem('app_user');
-      if (stored) {
-        const user = JSON.parse(stored);
-        if (user && !user.tenantId) {
-          user.tenantId = '00000000-0000-0000-0000-000000000000';
-        }
-        return user;
-      }
-    } catch (e) {
-      console.error("Erro ao ler usuário:", e);
-      localStorage.removeItem('app_user');
-    }
-    return null;
   },
 
   async getAll(): Promise<User[]> {

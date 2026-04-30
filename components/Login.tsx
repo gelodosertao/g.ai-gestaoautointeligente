@@ -4,11 +4,10 @@ import { User, Role } from '../types';
 import { dbUsers } from '../services/db';
 
 interface LoginProps {
-  onLogin: (user: User) => void;
   onOpenMenu: () => void;
 }
 
-const Login: React.FC<LoginProps> = ({ onLogin, onOpenMenu }) => {
+const Login: React.FC<LoginProps> = ({ onOpenMenu }) => {
   const [isRegistering, setIsRegistering] = useState(false);
 
   // Login State
@@ -43,10 +42,9 @@ const Login: React.FC<LoginProps> = ({ onLogin, onOpenMenu }) => {
     setError('');
 
     try {
-      const user = await dbUsers.login(email.trim().toLowerCase(), password);
+      await dbUsers.login(email.trim().toLowerCase(), password);
       setFailedAttempts(0); // Reset on success
       setLockoutUntil(null);
-      onLogin(user);
     } catch (err: any) {
       console.error("Login error:", err);
 
