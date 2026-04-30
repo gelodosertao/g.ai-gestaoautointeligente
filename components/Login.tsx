@@ -102,17 +102,17 @@ const Login: React.FC<LoginProps> = ({ onLogin, onOpenMenu }) => {
       <div className="max-w-md w-full bg-white rounded-2xl shadow-xl overflow-hidden flex flex-col animate-in fade-in zoom-in-95 duration-500 border border-slate-200">
 
         {/* Header Visual */}
-        <div className="bg-gai-navy p-8 text-center relative overflow-hidden flex flex-col items-center">
+        <div className="bg-white p-8 text-center relative overflow-hidden flex flex-col items-center border-b border-slate-100">
 
-          <div className="absolute -right-10 -top-10 text-gai-teal/10">
+          <div className="absolute -right-10 -top-10 text-slate-50">
             <Sun size={200} />
           </div>
 
-          <div className="transform scale-90 md:scale-100 mb-2 filter drop-shadow-2xl">
+          <div className="transform scale-90 md:scale-100 mb-2 relative z-10">
             <img src="/logo.png" alt="G.AI - Gestão Auto Inteligente" className="h-40 w-auto object-contain" />
           </div>
 
-          <p className="text-blue-200 text-xs mt-4 font-medium tracking-wider uppercase opacity-80 relative z-20">
+          <p className="text-slate-500 text-xs mt-4 font-medium tracking-wider uppercase relative z-20">
             {isRegistering ? 'Cadastro de Novo Usuário' : 'Acesso ao Sistema'}
           </p>
         </div>
